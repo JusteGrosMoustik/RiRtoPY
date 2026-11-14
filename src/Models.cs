@@ -7,7 +7,7 @@ namespace RiRtoPY
     [DataContract] public sealed class Graph
     {
         [DataMember] public string Schema = "rir-to-python/2";
-        [DataMember] public string Version = "0.3.0";
+        [DataMember] public string Version = "0.4.0";
         [DataMember] public string Document;
         [DataMember] public string Host;
         [DataMember] public List<Node> Nodes = new List<Node>();
@@ -20,6 +20,9 @@ namespace RiRtoPY
         [DataMember] public string NickName;
         [DataMember] public string Type;
         [DataMember] public string Assembly;
+        [DataMember] public string Description;
+        [DataMember] public string SourceText;
+        [DataMember] public List<string> Groups = new List<string>();
         [DataMember] public bool Selected;
         [DataMember] public string Operation;
         [DataMember] public string Literal;

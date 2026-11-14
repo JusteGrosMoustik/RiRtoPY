@@ -74,6 +74,11 @@ namespace RiRtoPY
                     Name = o.Name, NickName = o.NickName, Type = o.GetType().FullName,
                     Assembly = o.GetType().Assembly.GetName().FullName, Selected = roots.Contains(o)
                 };
+                node.Description = o.Description;
+                node.Groups.AddRange(doc.Objects.OfType<Grasshopper.Kernel.Special.GH_Group>()
+                    .Where(g => g.ObjectIDs.Contains(o.InstanceGuid)).Select(g => g.NickName));
+                var panel = o as Grasshopper.Kernel.Special.GH_Panel;
+                if (panel != null && panel.SourceCount == 0) node.SourceText = panel.UserText;
                 graph.Nodes.Add(node);
                 var component = o as IGH_Component;
                 var parameter = o as IGH_Param;

@@ -22,6 +22,8 @@ except NotImplementedError:
 else:
     raise AssertionError('Unsupported graph must not execute')
 print('PASS: %s assertions Python' % checks)
+with open(folder + '/functional.sketch.py', 'r') as source:
+    compile(source.read(), 'functional.sketch.py', 'exec')
 with open(sys.argv[0].replace('test_generated.py', 'test_rooms.py'), 'r') as source:
     exec(compile(source.read(), 'test_rooms.py', 'exec'), {})
 with open(sys.argv[0].replace('test_generated.py', 'test_general_nodes.py'), 'r') as source:

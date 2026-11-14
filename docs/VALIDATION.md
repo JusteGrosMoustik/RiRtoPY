@@ -21,3 +21,13 @@ Le workflow Windows compile, teste sous Python 3 et publie chaque nouvelle versi
 - Catalogue derive de 317 fichiers officiels de la revision RiR faa6a97653e9da17c6779103ac39537efff60da8, sans redistribution de ces fichiers de reference.
 - Regression du profil pieces et du profil scalaire incluse. Les documents utilisateur restent locaux.
 - A tester dans Rhino.Inside.Revit : filtre Categories -> Query Elements (avec/sans Limit) -> Element Name/Category, valeurs natives externes, identifiants 64 bits, unites de parametres et lecture des materiaux. Ne pas lancer les primitives manuelles d'ecriture hors d'une transaction controlee par l'appelant.
+
+## Recentrage 0.4.0 : extraction fonctionnelle
+
+Le parcours principal exporte un dossier ChatGPT, un canevas de conception Python et le JSON, sans exiger de traduction executable. Les validations des moteurs precedents restent des regressions de ces moteurs et ne conditionnent plus la disponibilite du dossier.
+
+Compilation locale reussie. 69 assertions C# : 32 scalaires, 14 profil pieces, 12 generales, 11 extraction. Les tests Python precedents restent verts et le canevas Python est compile syntaxiquement. Les nouveaux tests couvrent les noeuds inconnus, les surnoms/groupes, le texte observe des Panels, les clusters boites noires, les cycles et les sources absentes sans blocage de l'extraction.
+
+Extraction du second rapport utilisateur de 442 objets : dossier et canevas generes localement, sans publication des donnees utilisateur. Les descriptions/groupes/Panel texts absents de cet ancien rapport ne sont pas recuperes artificiellement.
+
+Reste a valider dans Grasshopper : nouvelle interface, export des trois fichiers, capture des descriptions/groupes directs et textes des Panels, lisibilite du dossier sur plusieurs graphes reels. Aucune execution du graphe et aucune modification de Revit.

@@ -1,15 +1,16 @@
-# RiRtoPY 0.3.0 : noeuds Revit generaux
+# RiRtoPY 0.4.0 : extraire les fonctionnalites pour ChatGPT
 
-Premier lot de traductions base sur les sources officielles McNeel RiR 1.35 : catalogue de 381 composants dans 317 fichiers, avec type CLR, GUID, source et statut individuel.
+Recentrage de l'outil : Grasshopper sert a exprimer visuellement les fonctionnalites a recoder en Python avec ChatGPT. L'interface exporte maintenant un dossier de reecriture plutot que de refuser les graphes non convertibles.
 
-12 composants avec generation Python automatique restreinte : Active Document, Query Element(s), Element Category, Element Name en lecture, Pin Element en lecture, Element View, Category Filter, Exclude Element Types Filter, Parameter Filter, Intersection Filter, Union Filter. Support d'une liste plate pour les accesseurs d'elements, sources natives explicites via le dictionnaire inputs, sorties nommees et indices de ports valides.
+Nouveau bouton Exporter pour ChatGPT :
+- .brief.md : prompt de travail, familles fonctionnelles, entrees/sorties, constantes, groupes et libelles, flux entre familles, inconnues a completer.
+- .sketch.py : canevas Python de conception, a completer ; aucun resultat executable pretendu.
+- .graph.json : annexe detaillee de reference.
 
-15 autres composants disposent de helpers manuels partiels (requetes, types, identite, materiaux, parametres et filtres logiques). Les fonctions renvoient des objets DB natifs ; les differences de filtres, unites et types sont documentees dans GENERAL_NODES.md. Les primitives manuelles d'ecriture exigent une transaction ouverte par l'appelant. La conversion automatique reste en lecture seule.
+Les composants inconnus, clusters, cycles ou arbres ne bloquent plus cette extraction. Aucun contenu interne manquant n'est invente. Les regroupements thematiques ne sont pas presentes comme un ordre d'execution. Les descriptions, noms des groupes directs et textes des Panels non connectes sont desormais captures.
 
-Le profil pieces 0.2.0 et le profil scalaire sont conserves. Arbres generaux, clusters, scripts, reconstruction/suivi des elements et le grand graphe utilisateur complet restent non traduits. Aucun contenu utilisateur fourni n'est publie.
+L'ancien catalogue et les moteurs de traduction restent disponibles comme ressources de reecriture, independamment du dossier. Les anciens rapports peuvent deja servir a l'extraction. Aucun document utilisateur n'est publie.
 
-Nouveau telechargement RiRtoPY-Python-0.3.0.zip : bibliotheque rir_nodes.py, catalogue JSON et guide. La bibliotheque est aussi incorporee au plugin pour generer des scripts autonomes.
+Validation : compilation locale, 69 assertions C# (dont 11 nouvelles sur l'extraction), tests Python existants et verification syntaxique du canevas. Extraction locale du rapport utilisateur de 442 objets reussie sans exiger de .gh ni de traduction des clusters. Nouvelle interface et capture en session Grasshopper a valider manuellement ; aucune execution du graphe ni modification Revit effectuee.
 
-Validation locale : compilation du plugin et de l'installateur ; 58 assertions C# (32 scalaires + 14 profil pieces + 12 generales), 6 assertions Python scalaires, scenarios pieces et 49 assertions Python generales sous IronPython 2.7. Les tests des appels Revit utilisent des doublures API. Aucun nouveau profil n'a ete valide dans Revit ; verifier sur un modele de test. Le workflow execute aussi les tests sous Python 3.
-
-Installer apres sauvegarde et fermeture de Rhino/Revit, puis relancer et reanalyser le graphe pour produire un rapport schema 2. Installation par utilisateur, sans droits administrateur, installateur non signe numeriquement.
+Installer apres sauvegarde et fermeture de Rhino/Revit, puis relancer et reanalyser le graphe pour capturer les nouvelles metadonnees.

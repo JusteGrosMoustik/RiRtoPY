@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("RiRtoPY Setup")]
-[assembly: AssemblyVersion("0.3.0.0")]
+[assembly: AssemblyVersion("0.4.0.0")]
 class Setup : Form
 {
     private readonly Label message;
@@ -21,11 +21,11 @@ class Setup : Form
     }
     Setup()
     {
-        Text = "Installer RiRtoPY 0.3.0";
+        Text = "Installer RiRtoPY 0.4.0";
         ClientSize = new Size(620,300); FormBorderStyle = FormBorderStyle.FixedDialog;
         MaximizeBox = false; StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI",10);
-        Controls.Add(new Label { Text = "RiRtoPY 0.3.0\nPlugin Grasshopper - prototype de conversion Python", Location = new Point(22,20), Size = new Size(570,55), Font = new Font("Segoe UI",12,FontStyle.Bold) });
+        Controls.Add(new Label { Text = "RiRtoPY 0.4.0\nPlugin Grasshopper - prototype de conversion Python", Location = new Point(22,20), Size = new Size(570,55), Font = new Font("Segoe UI",12,FontStyle.Bold) });
         Controls.Add(new Label { Text = "Installation pour ton compte Windows, sans droits administrateur.\nRhino et Grasshopper doivent deja etre installes.\n\nDestination : " + directory, Location = new Point(22,85), Size = new Size(570,95) });
         message = new Label { Text = "Enregistre ton travail et ferme Rhino et Revit avant de continuer.", Location = new Point(22,185), Size = new Size(570,55) };
         Controls.Add(message);
@@ -60,7 +60,7 @@ class Setup : Form
             // Atomic replacement preserves the installed file if replacement fails.
             if (File.Exists(target)) File.Replace(staging,target,Path.Combine(directory,"RiRtoPY.previous.bak"));
             else File.Move(staging,target);
-            File.WriteAllText(Path.Combine(directory,"VERSION"),"0.3.0");
+            File.WriteAllText(Path.Combine(directory,"VERSION"),"0.4.0");
             message.Text = "Installation terminee. Relance Rhino ou Rhino.Inside.Revit, puis Grasshopper.\nOuvre le menu RiRtoPY ou double-clique sur son composant.";
             install.Enabled = false;
         }
