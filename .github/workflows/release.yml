@@ -1,0 +1,60 @@
+name: Build, test and release
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  windows:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Obtain pinned McNeel SDK references
+        shell: pwsh
+        run: |
+          $version = '7.38.24338.17001'
+          New-Item -ItemType Directory -Force work/refs | Out-Null
+          foreach ($package in @('rhinocommon','grasshopper')) {
+            $zip = "work/$package.zip"
+            Invoke-WebRequest "https://api.nuget.org/v3-flatcontainer/$package/$version/$package.$version.nupkg" -OutFile $zip
+            Expand-Archive $zip "work/$package" -Force
+            Get-ChildItem "work/$package/lib/net48" -Filter '*.dll' | Copy-Item -Destination work/refs
+          }
+      - name: Build plugin and installer
+        shell: pwsh
+        run: ./scripts/build.ps1 -ReferenceDirectory "$pwd/work/refs"
+      - name: Test translator and generated Python
+        shell: pwsh
+        run: ./scripts/test.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RiRtoPY-Windows
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/SHA256SUMS.txt
+      - name: Publish version if new
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content VERSION -Raw).Trim()
+          $tag = "v$version"
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Release $tag already exists; increment VERSION for the next release."
+            exit 0
+          }
+          gh release create $tag "dist/RiRtoPY-Setup-$version.exe" "dist/RiRtoPY-Plugin-$version.zip" dist/SHA256SUMS.txt --target $env:GITHUB_SHA --title "RiRtoPY $version" --notes-file docs/RELEASE_NOTES.md --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }
