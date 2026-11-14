@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src\*.cs" />
+    <EmbeddedResource Include="python\rir_nodes.py" LogicalName="RiRtoPY.rir_nodes.py" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Runtime.Serialization" />

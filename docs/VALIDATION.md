@@ -12,3 +12,12 @@ Reprise du 14 novembre 2026.
 A valider manuellement : installation 0.2.0, chargement reel de cette version, execution du script dans Rhino.Inside.Revit, comparaison geometrique avec le graphe et son Panel, mise a jour complete depuis 0.1.0. Voir ROOM_AREAS.md pour le protocole et les limites.
 
 Le workflow Windows compile, teste sous Python 3 et publie chaque nouvelle version. Consulter Actions pour son resultat effectif.
+
+## Validation du lot general 0.3.0
+
+- Compilation locale du plugin/EXE et paquet Python : reussie.
+- 58 assertions C# (32 + 14 + 12), 6 assertions Python scalaires, scenarios pieces et 49 assertions Python du lot general sous IronPython 2.7 : reussis.
+- Les controles des appels Revit utilisent des doublures ; aucune nouvelle equivalence fonctionnelle n'est validee dans Revit.
+- Catalogue derive de 317 fichiers officiels de la revision RiR faa6a97653e9da17c6779103ac39537efff60da8, sans redistribution de ces fichiers de reference.
+- Regression du profil pieces et du profil scalaire incluse. Les documents utilisateur restent locaux.
+- A tester dans Rhino.Inside.Revit : filtre Categories -> Query Elements (avec/sans Limit) -> Element Name/Category, valeurs natives externes, identifiants 64 bits, unites de parametres et lecture des materiaux. Ne pas lancer les primitives manuelles d'ecriture hors d'une transaction controlee par l'appelant.

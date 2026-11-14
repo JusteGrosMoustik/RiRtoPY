@@ -78,6 +78,7 @@ class CoreTests
         Check(PythonEmitter.Quote("é").StartsWith("u\""), "unicode literals under IronPython 2");
         Directory.CreateDirectory(args[0]);
         RoomAreaTests.Run(args[0]);
+        GeneralRevitTests.Run(args[0]);
         File.WriteAllText(Path.Combine(args[0], "division.py"),python,new UTF8Encoding(false));
         graph=Fixture(); graph.Nodes[0].Operation="add";
         File.WriteAllText(Path.Combine(args[0], "addition.py"),PythonEmitter.Emit(graph),new UTF8Encoding(false));

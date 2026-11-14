@@ -56,5 +56,5 @@ jobs:
             Write-Output "Release $tag already exists; increment VERSION for the next release."
             exit 0
           }
-          gh release create $tag "dist/RiRtoPY-Setup-$version.exe" "dist/RiRtoPY-Plugin-$version.zip" dist/SHA256SUMS.txt --target $env:GITHUB_SHA --title "RiRtoPY $version" --notes-file docs/RELEASE_NOTES.md --latest
+          gh release create $tag "dist/RiRtoPY-Setup-$version.exe" "dist/RiRtoPY-Plugin-$version.zip" "dist/RiRtoPY-Python-$version.zip" dist/SHA256SUMS.txt --target $env:GITHUB_SHA --title "RiRtoPY $version" --notes-file docs/RELEASE_NOTES.md --latest
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

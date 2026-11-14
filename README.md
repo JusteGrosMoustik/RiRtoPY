@@ -2,7 +2,7 @@
 
 Plugin Windows pour utiliser Grasshopper comme guide de developpement de fonctions Python.
 
-## Version 0.2.0 : prototype scalaire et profil pieces experimental
+## Version 0.3.0 : prototype scalaire et profil pieces experimental
 
 - Menu **RiRtoPY** dans Grasshopper, et composant **RiRtoPY / Outils** (double-clic).
 - Analyse de la selection avec ses dependances en amont, ou de tout le document.
@@ -12,11 +12,11 @@ Plugin Windows pour utiliser Grasshopper comme guide de developpement de fonctio
 - Bouton **Rechercher une mise a jour** : verification des releases stables, telechargement de l'installateur, controle SHA-256, ouverture de l'installateur.
 - Installateur Windows autonome, par utilisateur, sans droits administrateur.
 
-**Limites :** hors du profil experimental decrit dans [docs/ROOM_AREAS.md](docs/ROOM_AREAS.md), cette version ne traduit pas les arbres/listes, clusters, scripts, expressions, panels, geometries, ni les composants Rhino.Inside/Revit. Elle ne modifie pas Revit. Tout objet ou comportement reconnu comme non pris en charge bloque la fonction generee avec `NotImplementedError` ; le rapport reste exportable. Les valeurs d'objets inconnus ne sont pas figees pour simuler une traduction. Ce prototype ne garantit pas l'equivalence de tout graphe Grasshopper.
+**Limites :** hors des profils experimentaux decrits dans [ROOM_AREAS](docs/ROOM_AREAS.md) et [GENERAL_NODES](docs/GENERAL_NODES.md), cette version ne traduit pas les arbres/listes, clusters, scripts, expressions, panels, geometries, ni les composants Rhino.Inside/Revit. Elle ne modifie pas Revit. Tout objet ou comportement reconnu comme non pris en charge bloque la fonction generee avec `NotImplementedError` ; le rapport reste exportable. Les valeurs d'objets inconnus ne sont pas figees pour simuler une traduction. Ce prototype ne garantit pas l'equivalence de tout graphe Grasshopper.
 
 ## Installer
 
-1. Ouvrir [Releases](https://github.com/JusteGrosMoustik/RiRtoPY/releases) et telecharger `RiRtoPY-Setup-0.2.0.exe`.
+1. Ouvrir [Releases](https://github.com/JusteGrosMoustik/RiRtoPY/releases) et telecharger `RiRtoPY-Setup-0.3.0.exe`.
 2. Enregistrer le travail et fermer toutes les instances de Rhino et Revit.
 3. Lancer l'installateur et cliquer sur **Installer / Mettre a jour**.
 4. Relancer Rhino ou Rhino.Inside.Revit, ouvrir Grasshopper, puis le menu **RiRtoPY**.
@@ -54,10 +54,16 @@ Le compilateur C# .NET Framework fourni par Windows suffit pour cette premiere v
 
 `RiRtoPY.csproj` permet aussi d'ouvrir le projet dans Visual Studio avec le SDK .NET et les outils de developpement .NET Framework 4.8. Les references sont restaurees depuis NuGet.
 
-Pour publier une mise a jour : executer `scripts/set-version.ps1 -Version 0.2.0`, actualiser les notes de release, compiler/tester et pousser sur `main`. Le workflow reconstruit le plugin et son installateur puis cree une release si ce numero n'existe pas encore. Une release existante n'est pas ecrasee.
+Pour publier une mise a jour : executer `scripts/set-version.ps1 -Version 0.3.0`, actualiser les notes de release, compiler/tester et pousser sur `main`. Le workflow reconstruit le plugin et son installateur puis cree une release si ce numero n'existe pas encore. Une release existante n'est pas ecrasee.
 
 Pour la premiere publication depuis le paquet complet : installer Git et GitHub CLI, se connecter avec `gh auth login`, puis executer `Publish-GitHub.ps1`. Ce script verifie les empreintes locales, clone le depot dans un nouveau dossier temporaire, copie les sources, cree un commit et pousse sur main sans force. Il joint aussi les binaires deja compiles a la release. Il conserve sa copie de travail et ne modifie aucun autre depot local.
 
 Architecture : `src/GraphReader.cs` lit le document, `src/Models.cs` decrit le graphe, `src/PythonEmitter.cs` traduit le sous-ensemble supporte, `src/Plugin.cs` gere l'interface, `src/UpdateService.cs` gere les releases. `installer/Setup.cs` contient l'installation.
 
 Les nouvelles traductions doivent etre ajoutees avec un exemple et une verification de resultat. Prochain objectif : operations Revit de lecture, puis gestion explicite des transactions et des elements crees.
+
+## Noeuds Revit generaux (0.3.0)
+
+La generation automatique couvre des sous-ensembles de 12 composants RiR generaux en lecture seule ; 15 autres disposent de fonctions Python manuelles partielles. Voir [le guide et ses limites](docs/GENERAL_NODES.md) et [le catalogue de 381 composants](python/node-catalog.json). Les entrees natives non serialisees sont des arguments explicites, jamais des valeurs devinees. Les arbres et clusters generaux restent bloques. Le profil de cinq objets Query Rooms/Surface/Area/Mass Addition/Panel est conserve.
+
+Le ZIP `RiRtoPY-Python-0.3.0.zip` contient la bibliotheque, le catalogue et le guide. Le plugin incorpore aussi la bibliotheque dans les scripts generes ; il ne faut pas l'installer dans Revit pour generer un export. L'execution des fonctions Revit exige un contexte API Revit valide et les assemblies necessaires.

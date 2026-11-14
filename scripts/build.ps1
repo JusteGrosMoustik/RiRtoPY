@@ -31,6 +31,7 @@ foreach ($reference in @($rhino,$gh,$ghio)) {
 $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter '*.cs' | ForEach-Object FullName)
 $plugin = Join-Path $payload 'RiRtoPY.gha'
 $argsCompiler = @('/nologo','/target:library','/optimize+','/codepage:65001',"/out:$plugin", "/reference:$rhino", "/reference:$gh", "/reference:$ghio", '/reference:System.Drawing.dll', '/reference:System.Windows.Forms.dll', '/reference:System.Runtime.Serialization.dll', '/reference:System.Net.Http.dll') + $sources
+$argsCompiler += '/resource:' + (Join-Path $root 'python\rir_nodes.py') + ',RiRtoPY.rir_nodes.py'
 & $compiler @argsCompiler
 if ($LASTEXITCODE -ne 0) { throw 'Echec de compilation du plugin.' }
 $setup = Join-Path $dist "RiRtoPY-Setup-$version.exe"
@@ -38,8 +39,11 @@ $setup = Join-Path $dist "RiRtoPY-Setup-$version.exe"
 if ($LASTEXITCODE -ne 0) { throw 'Echec de compilation de l installation.' }
 Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination $payload -Force
 Copy-Item -LiteralPath (Join-Path $root 'VERSION') -Destination $payload -Force
+Copy-Item -LiteralPath (Join-Path $root 'python') -Destination $payload -Recurse -Force
 $zip = Join-Path $dist "RiRtoPY-Plugin-$version.zip"
 Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $zip -Force
-$sums = @($setup,$zip) | ForEach-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + (Split-Path $_ -Leaf) }
+$runtimeZip = Join-Path $dist "RiRtoPY-Python-$version.zip"
+Compress-Archive -Path (Join-Path $root 'python'), (Join-Path $root 'docs\GENERAL_NODES.md') -DestinationPath $runtimeZip -Force
+$sums = @($setup,$zip,$runtimeZip) | ForEach-Object { (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash.ToLowerInvariant() + '  ' + (Split-Path $_ -Leaf) }
 [IO.File]::WriteAllLines((Join-Path $dist 'SHA256SUMS.txt'), $sums, (New-Object Text.UTF8Encoding($false)))
 Write-Output "Compile : $setup"
