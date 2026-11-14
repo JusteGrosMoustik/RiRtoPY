@@ -22,3 +22,5 @@ except NotImplementedError:
 else:
     raise AssertionError('Unsupported graph must not execute')
 print('PASS: %s assertions Python' % checks)
+with open(sys.argv[0].replace('test_generated.py', 'test_rooms.py'), 'r') as source:
+    exec(compile(source.read(), 'test_rooms.py', 'exec'), {})

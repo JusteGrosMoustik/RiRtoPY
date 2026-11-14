@@ -1,14 +1,14 @@
-# Validation 0.1.0
+# Validation 0.2.0
 
-Effectue sur Windows, avec les references Rhino 7 installees :
+Reprise du 14 novembre 2026.
 
-- Compilation du plugin .gha : reussie.
-- Compilation de l'installateur EXE avec le plugin integre : reussie.
-- Moteur C# et gestion des versions : 32 assertions reussies.
-- Python genere execute sous IronPython 2.7 : 6 assertions reussies.
+- Compilation locale du plugin et de l'installateur contre Rhino 7 : reussie.
+- Tests : 32 assertions C# scalaires, 14 assertions C# du profil pieces, 6 assertions Python scalaires sous IronPython 2.7 : reussis.
+- Scenarios Python du profil avec doublures API : phase implicite, exclusion des pieces non placees, somme et sommes cumulees, sorties, liste vide, geometrie manquante/invalide, liberation des ressources, rejet d'une version RiR incompatible : reussis. Ils ne valident pas le calcul geometrique reel.
+- Graphe utilisateur de cinq objets : profil reconnu apres verification des metadonnees optionnelles/persistantes dans son archive XML. Script produit ; pas d'execution Revit effectuee. Les fichiers utilisateur restent hors du depot.
+- Capture utilisateur : interface 0.1.0 chargee dans Grasshopper / Rhino 9.0.26293.12303 avec RhinoInside.Revit.GH 1.35.9698.15636 ; analyse et blocage explicite observes. Cela ne valide pas l'interface ni l'export Revit 0.2.0.
+- Release 0.1.0 : workflow GitHub reussi, installateur et ZIP telecharges et controles SHA-256 lors de la session precedente.
 
-Non effectue : chargement de l'interface dans une session Rhino/Grasshopper, installation sur un second poste, conversion d'un graphe reel, verification d'une mise a jour depuis une release publiee, validation Rhino.Inside/Revit. Le workflow GitHub n'a pas encore ete execute.
+A valider manuellement : installation 0.2.0, chargement reel de cette version, execution du script dans Rhino.Inside.Revit, comparaison geometrique avec le graphe et son Panel, mise a jour complete depuis 0.1.0. Voir ROOM_AREAS.md pour le protocole et les limites.
 
-Essai manuel conseille : deux Number Sliders + Addition, analyser Addition et exporter. Comparer le resultat de `run()` avec Grasshopper. Verifier ensuite qu'un composant Revit ou un Flatten provoque un blocage explicite. Tester l'installation et les remplacements apres fermeture des logiciels. Le bouton de mise a jour d'une version 0.1.0 ne telecharge que les releases stables strictement superieures.
-
-Reprise du 14 novembre 2026 : compilation locale et tests relances avec succes. Corrections : chaines Unicode compatibles IronPython 2/Python 3, validation des operations et du nombre d'entrees, blocage des expressions sur les parametres autonomes. Le depot distant initial ne contenait que son titre README ; historique conserve.
+Le workflow Windows compile, teste sous Python 3 et publie chaque nouvelle version. Consulter Actions pour son resultat effectif.

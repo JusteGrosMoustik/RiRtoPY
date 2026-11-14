@@ -6,8 +6,8 @@ namespace RiRtoPY
 {
     [DataContract] public sealed class Graph
     {
-        [DataMember] public string Schema = "rir-to-python/1";
-        [DataMember] public string Version = "0.1.0";
+        [DataMember] public string Schema = "rir-to-python/2";
+        [DataMember] public string Version = "0.2.0";
         [DataMember] public string Document;
         [DataMember] public string Host;
         [DataMember] public List<Node> Nodes = new List<Node>();
@@ -29,6 +29,8 @@ namespace RiRtoPY
     }
     [DataContract] public sealed class Port
     {
+        [DataMember] public bool Optional;
+        [DataMember] public bool HasPersistentData;
         [DataMember] public string Name;
         [DataMember] public string Access;
         [DataMember] public string Mapping;

@@ -12,15 +12,15 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 [assembly: AssemblyTitle("RiRtoPY")]
-[assembly: AssemblyVersion("0.1.0.0")]
-[assembly: AssemblyFileVersion("0.1.0.0")]
+[assembly: AssemblyVersion("0.2.0.0")]
+[assembly: AssemblyFileVersion("0.2.0.0")]
 
 namespace RiRtoPY
 {
     public sealed class AssemblyInfo : GH_AssemblyInfo
     {
         public override string Name { get { return "RiRtoPY"; } }
-        public override string Description { get { return "Analyse de graphes et generation Python - prototype scalaire"; } }
+        public override string Description { get { return "Analyse de graphes et generation Python - prototype scalaire et profil pieces experimental"; } }
         public override Guid Id { get { return new Guid("c94b6862-104b-40a3-a7c4-0ab83504240b"); } }
         public override string AuthorName { get { return "Louhann Brocard"; } }
         public override string AuthorContact { get { return "https://github.com/JusteGrosMoustik/RiRtoPY"; } }
@@ -110,7 +110,7 @@ namespace RiRtoPY
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
-            layout.Controls.Add(new Label { Text = "Selectionne un bloc Grasshopper, puis analyse-le. Les dependances en amont sont incluses.\nPrototype : calculs scalaires. Les operations non traduites bloquent le Python genere.", AutoSize = true },0,0);
+            layout.Controls.Add(new Label { Text = "Selectionne un bloc Grasshopper, puis analyse-le. Les dependances en amont sont incluses.\nPrototype : scalaires et chaine pieces/surfaces (RiR 1.35). Les operations non traduites bloquent le Python genere.", AutoSize = true },0,0);
             var tools = new FlowLayoutPanel { Dock = DockStyle.Fill };
             selection = new CheckBox { Text = "Selection uniquement", Checked = true, AutoSize = true, Margin = new Padding(3,8,12,3) };
             tools.Controls.Add(selection);
@@ -146,7 +146,7 @@ namespace RiRtoPY
                 python = PythonEmitter.Emit(graph);
                 var problems = PythonEmitter.Problems(graph);
                 preview.Text = python.Replace("\n", "\r\n");
-                status.Text = graph.Nodes.Count + " objets | " + problems.Count + " blocages. " + (problems.Count == 0 ? "Export scalaire disponible." : "Export de diagnostic disponible ; Python bloque.");
+                status.Text = graph.Nodes.Count + " objets | " + problems.Count + " blocages. " + (problems.Count == 0 ? "Export disponible ; verifier le contexte du script." : "Export de diagnostic disponible ; Python bloque.");
                 export.Enabled = true;
             }
             catch (Exception ex) { graph = null; python = null; export.Enabled = false; status.Text = ex.Message; }

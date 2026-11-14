@@ -42,6 +42,8 @@ namespace RiRtoPY
         private static Port ReadPort(IGH_Param p)
         {
             var result = new Port {
+                Optional = p.Optional,
+                HasPersistentData = (Property(p, "PersistentData") as IGH_Structure) != null && ((IGH_Structure)Property(p, "PersistentData")).DataCount > 0,
                 Name = p.Name, Access = p.Access.ToString().ToLowerInvariant(),
                 Mapping = p.DataMapping.ToString(), Reverse = p.Reverse, Simplify = p.Simplify,
                 Expression = Convert.ToString(Property(p, "Expression"), CultureInfo.InvariantCulture),
@@ -79,6 +81,8 @@ namespace RiRtoPY
                 {
                     node.Inputs.AddRange(component.Params.Input.Select(ReadPort));
                     node.Outputs.AddRange(component.Params.Output.Select(p => p.Name));
+                    if (component.Params.Input.Any(p => p.Locked) || component.Params.Output.Any(p => p.Locked || p.Reverse || p.Simplify || p.DataMapping != GH_DataMapping.None))
+                        node.Issues.Add("Parametre desactive ou modificateur de sortie non traduit.");
                     string operation;
                     if (Rules.TryGetValue(node.Type, out operation) && o.GetType().Assembly.GetName().Name == "MathComponents") node.Operation = operation;
                     if (component.Params.Input.Count < 2 && node.Operation != null) node.Issues.Add("Nombre d'entrees arithmetiques inattendu.");

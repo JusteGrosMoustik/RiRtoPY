@@ -68,6 +68,7 @@ namespace RiRtoPY
 
         public static List<string> Problems(Graph graph)
         {
+            if (RoomAreaEmitter.Matches(graph)) return new List<string>();
             var problems = new List<string>();
             foreach (var n in graph.Nodes)
             {
@@ -97,6 +98,7 @@ namespace RiRtoPY
 
         public static string Emit(Graph graph)
         {
+            if (RoomAreaEmitter.Matches(graph)) return RoomAreaEmitter.Emit(graph);
             var problems = Problems(graph);
             var b = new StringBuilder();
             b.AppendLine("# -*- coding: utf-8 -*-");

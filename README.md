@@ -2,7 +2,7 @@
 
 Plugin Windows pour utiliser Grasshopper comme guide de developpement de fonctions Python.
 
-## Version 0.1.0 : prototype scalaire
+## Version 0.2.0 : prototype scalaire et profil pieces experimental
 
 - Menu **RiRtoPY** dans Grasshopper, et composant **RiRtoPY / Outils** (double-clic).
 - Analyse de la selection avec ses dependances en amont, ou de tout le document.
@@ -12,11 +12,11 @@ Plugin Windows pour utiliser Grasshopper comme guide de developpement de fonctio
 - Bouton **Rechercher une mise a jour** : verification des releases stables, telechargement de l'installateur, controle SHA-256, ouverture de l'installateur.
 - Installateur Windows autonome, par utilisateur, sans droits administrateur.
 
-**Limites :** cette version ne traduit pas les arbres/listes, clusters, scripts, expressions, panels, geometries, ni les composants Rhino.Inside/Revit. Elle ne modifie pas Revit. Tout objet ou comportement reconnu comme non pris en charge bloque la fonction generee avec `NotImplementedError` ; le rapport reste exportable. Les valeurs d'objets inconnus ne sont pas figees pour simuler une traduction. Ce prototype ne garantit pas l'equivalence de tout graphe Grasshopper.
+**Limites :** hors du profil experimental decrit dans [docs/ROOM_AREAS.md](docs/ROOM_AREAS.md), cette version ne traduit pas les arbres/listes, clusters, scripts, expressions, panels, geometries, ni les composants Rhino.Inside/Revit. Elle ne modifie pas Revit. Tout objet ou comportement reconnu comme non pris en charge bloque la fonction generee avec `NotImplementedError` ; le rapport reste exportable. Les valeurs d'objets inconnus ne sont pas figees pour simuler une traduction. Ce prototype ne garantit pas l'equivalence de tout graphe Grasshopper.
 
 ## Installer
 
-1. Ouvrir [Releases](https://github.com/JusteGrosMoustik/RiRtoPY/releases) et telecharger `RiRtoPY-Setup-0.1.0.exe`.
+1. Ouvrir [Releases](https://github.com/JusteGrosMoustik/RiRtoPY/releases) et telecharger `RiRtoPY-Setup-0.2.0.exe`.
 2. Enregistrer le travail et fermer toutes les instances de Rhino et Revit.
 3. Lancer l'installateur et cliquer sur **Installer / Mettre a jour**.
 4. Relancer Rhino ou Rhino.Inside.Revit, ouvrir Grasshopper, puis le menu **RiRtoPY**.

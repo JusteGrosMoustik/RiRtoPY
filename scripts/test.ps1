@@ -5,7 +5,7 @@ $work = Join-Path $root 'work\tests'
 New-Item -ItemType Directory -Force -Path $work | Out-Null
 $compiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $exe = Join-Path $work 'CoreTests.exe'
-& $compiler /nologo /codepage:65001 "/out:$exe" /reference:System.Runtime.Serialization.dll /reference:System.Net.Http.dll /reference:System.Windows.Forms.dll (Join-Path $root 'src\Models.cs') (Join-Path $root 'src\PythonEmitter.cs') (Join-Path $root 'src\UpdateService.cs') (Join-Path $root 'tests\CoreTests.cs')
+& $compiler /nologo /codepage:65001 "/out:$exe" /reference:System.Runtime.Serialization.dll /reference:System.Net.Http.dll /reference:System.Windows.Forms.dll (Join-Path $root 'src\Models.cs') (Join-Path $root 'src\PythonEmitter.cs') (Join-Path $root 'src\RoomAreaEmitter.cs') (Join-Path $root 'src\UpdateService.cs') (Join-Path $root 'tests\CoreTests.cs') (Join-Path $root 'tests\RoomAreaTests.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Compilation des tests impossible.' }
 & $exe $work
 if ($LASTEXITCODE -ne 0) { throw 'Tests C# en echec.' }
