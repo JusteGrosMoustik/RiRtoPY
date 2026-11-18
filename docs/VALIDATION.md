@@ -1,33 +1,25 @@
-# Validation 0.2.0
+# Validation 0.5.0
 
-Reprise du 14 novembre 2026.
+## Verifications locales
 
-- Compilation locale du plugin et de l'installateur contre Rhino 7 : reussie.
-- Tests : 32 assertions C# scalaires, 14 assertions C# du profil pieces, 6 assertions Python scalaires sous IronPython 2.7 : reussis.
-- Scenarios Python du profil avec doublures API : phase implicite, exclusion des pieces non placees, somme et sommes cumulees, sorties, liste vide, geometrie manquante/invalide, liberation des ressources, rejet d'une version RiR incompatible : reussis. Ils ne valident pas le calcul geometrique reel.
-- Graphe utilisateur de cinq objets : profil reconnu apres verification des metadonnees optionnelles/persistantes dans son archive XML. Script produit ; pas d'execution Revit effectuee. Les fichiers utilisateur restent hors du depot.
-- Capture utilisateur : interface 0.1.0 chargee dans Grasshopper / Rhino 9.0.26293.12303 avec RhinoInside.Revit.GH 1.35.9698.15636 ; analyse et blocage explicite observes. Cela ne valide pas l'interface ni l'export Revit 0.2.0.
-- Release 0.1.0 : workflow GitHub reussi, installateur et ZIP telecharges et controles SHA-256 lors de la session precedente.
+- Compilation du plugin et de l'installateur contre les DLL Rhino 7 installees.
+- 22 assertions automatiques sur le rapport : fichier, groupes, clusters a plusieurs niveaux, instances partageant des GUID internes, connexions, indices de ports, sources multiples ordonnees, passage de cluster, texte de Panel multiligne, valeurs de Panel connecte, chemins de branches, nulls, donnees persistantes/volatiles, modificateurs, expressions, extraction incomplete, erreur de valeur, source absente, long texte sans troncature, JSON indente, depassement du quota habituel de serialisation, aller-retour JSON et document vide.
+- Le test utilise des modeles construits en memoire. Il valide le rendu et la serialisation, pas la capture reelle dans Grasshopper.
+- La structure ParamMap a ete examinee dans le SDK Rhino 7 installe : Key = GUID du parametre externe, Value = GUID du point de passage interne. L'export signale toute absence ou incoherence plutot que de deviner l'ordre des points de passage.
+- Le test automatique intercepte ses erreurs et retourne un code d'echec sans ouvrir de boite de dialogue Windows.
 
-A valider manuellement : installation 0.2.0, chargement reel de cette version, execution du script dans Rhino.Inside.Revit, comparaison geometrique avec le graphe et son Panel, mise a jour complete depuis 0.1.0. Voir ROOM_AREAS.md pour le protocole et les limites.
+Une tentative de construction de GH_Document hors de Rhino a echoue faute d'initialisation du moteur natif Rhino. Elle n'est pas une validation du lecteur en execution. Aucun graphe utilisateur ni document Revit n'a ete execute ou modifie.
 
-Le workflow Windows compile, teste sous Python 3 et publie chaque nouvelle version. Consulter Actions pour son resultat effectif.
+## Essai dans Grasshopper a effectuer
 
-## Validation du lot general 0.3.0
+1. Installer la nouvelle version apres sauvegarde et fermeture de Rhino/Revit.
+2. Preparer un fichier de test avec deux groupes imbriques, un Panel multiline non connecte, un Panel connecte, un slider, un toggle, une liste de valeurs et un parametre contenant plusieurs branches et valeurs nulles.
+3. Inclure un cluster contenant un sous-cluster et plusieurs entrees/sorties. Donner des noms identiques aux points de passage et changer leur position, pour verifier que les correspondances suivent les GUID plutot que les noms ou la position.
+4. Dupliquer un cluster. Verifier que leurs identifiants scopes et leurs connexions restent distincts.
+5. Analyser et exporter. Comparer chaque objet, groupe, branche et connexion des deux documents internes avec le .md et le .graph.json.
+6. Modifier un Panel apres l'analyse puis exporter : le contenu exporte doit etre actualise.
+7. Tester un cluster protege : extraction incomplete explicite, autres objets toujours exportes. Ne pas contourner la protection.
+8. Desactiver le Solver, vider les donnees d'un composant et exporter : les donnees manquantes doivent etre signalees, aucun recalcul ne doit se produire.
+9. Verifier le chargement sous les versions Rhino/Grasshopper effectivement utilisees, notamment ParamMap. La compatibilite du schema de serialisation entre versions n'est pas supposee acquise.
 
-- Compilation locale du plugin/EXE et paquet Python : reussie.
-- 58 assertions C# (32 + 14 + 12), 6 assertions Python scalaires, scenarios pieces et 49 assertions Python du lot general sous IronPython 2.7 : reussis.
-- Les controles des appels Revit utilisent des doublures ; aucune nouvelle equivalence fonctionnelle n'est validee dans Revit.
-- Catalogue derive de 317 fichiers officiels de la revision RiR faa6a97653e9da17c6779103ac39537efff60da8, sans redistribution de ces fichiers de reference.
-- Regression du profil pieces et du profil scalaire incluse. Les documents utilisateur restent locaux.
-- A tester dans Rhino.Inside.Revit : filtre Categories -> Query Elements (avec/sans Limit) -> Element Name/Category, valeurs natives externes, identifiants 64 bits, unites de parametres et lecture des materiaux. Ne pas lancer les primitives manuelles d'ecriture hors d'une transaction controlee par l'appelant.
-
-## Recentrage 0.4.0 : extraction fonctionnelle
-
-Le parcours principal exporte un dossier ChatGPT, un canevas de conception Python et le JSON, sans exiger de traduction executable. Les validations des moteurs precedents restent des regressions de ces moteurs et ne conditionnent plus la disponibilite du dossier.
-
-Compilation locale reussie. 69 assertions C# : 32 scalaires, 14 profil pieces, 12 generales, 11 extraction. Les tests Python precedents restent verts et le canevas Python est compile syntaxiquement. Les nouveaux tests couvrent les noeuds inconnus, les surnoms/groupes, le texte observe des Panels, les clusters boites noires, les cycles et les sources absentes sans blocage de l'extraction.
-
-Extraction du second rapport utilisateur de 442 objets : dossier et canevas generes localement, sans publication des donnees utilisateur. Les descriptions/groupes/Panel texts absents de cet ancien rapport ne sont pas recuperes artificiellement.
-
-Reste a valider dans Grasshopper : nouvelle interface, export des trois fichiers, capture des descriptions/groupes directs et textes des Panels, lisibilite du dossier sur plusieurs graphes reels. Aucune execution du graphe et aucune modification de Revit.
+Les anciens tests de traduction sont conserves dans scripts/test-legacy.ps1. Ils ne valident pas l'extracteur 0.5.0 et ne font plus partie du parcours principal.

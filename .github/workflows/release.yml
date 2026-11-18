@@ -16,9 +16,6 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
       - name: Obtain pinned McNeel SDK references
         shell: pwsh
         run: |
@@ -33,7 +30,7 @@ jobs:
       - name: Build plugin and installer
         shell: pwsh
         run: ./scripts/build.ps1 -ReferenceDirectory "$pwd/work/refs"
-      - name: Test translator and generated Python
+      - name: Test complete graph reports
         shell: pwsh
         run: ./scripts/test.ps1
       - uses: actions/upload-artifact@v4
@@ -56,5 +53,5 @@ jobs:
             Write-Output "Release $tag already exists; increment VERSION for the next release."
             exit 0
           }
-          gh release create $tag "dist/RiRtoPY-Setup-$version.exe" "dist/RiRtoPY-Plugin-$version.zip" "dist/RiRtoPY-Python-$version.zip" dist/SHA256SUMS.txt --target $env:GITHUB_SHA --title "RiRtoPY $version" --notes-file docs/RELEASE_NOTES.md --latest
+          gh release create $tag "dist/RiRtoPY-Setup-$version.exe" "dist/RiRtoPY-Plugin-$version.zip" dist/SHA256SUMS.txt --target $env:GITHUB_SHA --title "RiRtoPY $version" --notes-file docs/RELEASE_NOTES.md --latest
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed.' }

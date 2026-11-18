@@ -1,134 +1,179 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Grasshopper;
 using Grasshopper.Kernel;
 using Grasshopper.Kernel.Data;
-using Grasshopper.Kernel.Types;
+using Grasshopper.Kernel.Special;
+using GH_IO.Serialization;
 
 namespace RiRtoPY
 {
+    // Read-only snapshot. Never collects data, solves, expires or modifies the document.
     public static class GraphReader
     {
-        // Exact CLR types, not component captions which users can rename.
-        private static readonly Dictionary<string,string> Rules = new Dictionary<string,string>
+        private static object Property(object value, string name)
         {
-            {"MathComponents.OperatorComponents.Component_VariableAddition", "add"},
-            {"MathComponents.OperatorComponents.Component_VariableSubtraction", "subtract"},
-            {"MathComponents.OperatorComponents.Component_VariableMultiplication", "multiply"},
-            {"MathComponents.OperatorComponents.Operator_Division", "divide"}
-        };
-
-        private static object Property(object o, string name)
-        {
-            var p = o.GetType().GetProperty(name);
-            return p == null ? null : p.GetValue(o, null);
+            if (value == null) return null;
+            var p = value.GetType().GetProperty(name);
+            return p == null ? null : p.GetValue(value, null);
         }
-
-        private static string PersistentScalar(IGH_Param p)
-        {
-            var tree = Property(p, "PersistentData") as IGH_Structure;
-            if (tree == null || tree.PathCount != 1 || tree.DataCount != 1 || tree.get_Path(0).ToString() != "{0}") return null;
-            var value = tree.AllData(true).Cast<IGH_Goo>().FirstOrDefault();
-            return value == null ? null : PythonEmitter.ScalarLiteral(value.ScriptVariable());
-        }
-
+        private static string Error(Exception ex) { return (ex.InnerException ?? ex).Message; }
         private static IGH_DocumentObject Owner(IGH_Param p)
-        {
-            return p.Attributes.GetTopLevel.DocObject;
-        }
+        { return p.Attributes == null ? p : p.Attributes.GetTopLevel.DocObject; }
 
-        private static Port ReadPort(IGH_Param p)
+        private static DataSnapshot Capture(Func<IGH_Structure> read)
+        {
+            var result = new DataSnapshot();
+            try
+            {
+                var tree = read();
+                if (tree == null) { result.Status = "unavailable"; return result; }
+                result.Status = tree.DataCount == 0 ? "empty" : "captured";
+                result.ItemCount = tree.DataCount;
+                for (int i = 0; i < tree.PathCount; i++)
+                {
+                    var branch = new DataBranch { Path = tree.get_Path(i).ToString() };
+                    result.Branches.Add(branch);
+                    foreach (var value in tree.get_Branch(i))
+                    {
+                        var item = new DataValue { IsNull = value == null, Type = value == null ? null : value.GetType().FullName };
+                        branch.Values.Add(item);
+                        try { item.Text = value == null ? null : Convert.ToString(value, CultureInfo.InvariantCulture); }
+                        catch (Exception ex) { result.Status = "partial"; result.Error = Error(ex); }
+                    }
+                }
+            }
+            catch (Exception ex) { result.Status = "error"; result.Error = Error(ex); }
+            return result;
+        }
+        private static Port ReadPort(IGH_Param p, string scope, bool sources)
         {
             var result = new Port {
-                Optional = p.Optional,
-                HasPersistentData = (Property(p, "PersistentData") as IGH_Structure) != null && ((IGH_Structure)Property(p, "PersistentData")).DataCount > 0,
-                Name = p.Name, Access = p.Access.ToString().ToLowerInvariant(),
+                Id = scope + "/" + p.InstanceGuid, Name = p.Name, NickName = p.NickName,
+                Description = p.Description, Type = p.GetType().FullName,
+                Optional = p.Optional, Access = p.Access.ToString().ToLowerInvariant(),
                 Mapping = p.DataMapping.ToString(), Reverse = p.Reverse, Simplify = p.Simplify,
                 Expression = Convert.ToString(Property(p, "Expression"), CultureInfo.InvariantCulture),
-                Literal = p.SourceCount == 0 ? PersistentScalar(p) : null
+                Persistent = Capture(() => Property(p, "PersistentData") as IGH_Structure),
+                Volatile = Capture(() => p.VolatileData)
             };
-            foreach (var source in p.Sources)
+            result.HasPersistentData = result.Persistent.ItemCount > 0;
+            if (sources) foreach (var source in p.Sources)
             {
                 var owner = Owner(source);
                 var component = owner as IGH_Component;
-                result.Sources.Add(new Wire { Node = owner.InstanceGuid.ToString(), Output = component == null ? 0 : component.Params.Output.IndexOf(source) });
+                result.Sources.Add(new Wire { Node = scope + "/" + owner.InstanceGuid, Output = component == null ? 0 : component.Params.Output.IndexOf(source) });
             }
             return result;
         }
-
+        private static void Settings(IGH_DocumentObject o, Node n)
+        {
+            foreach (string name in new[] { "CurrentValue", "Value" })
+            {
+                var value = Property(o, name);
+                if (value != null) n.Settings.Add(name + " = " + Convert.ToString(value, CultureInfo.InvariantCulture));
+            }
+            var slider = Property(o, "Slider");
+            if (slider != null) foreach (string name in new[] { "Minimum", "Maximum", "DecimalPlaces", "Type" })
+                n.Settings.Add("Slider." + name + " = " + Convert.ToString(Property(slider, name), CultureInfo.InvariantCulture));
+            var items = Property(o, "ListItems") as IEnumerable;
+            if (items != null) foreach (var item in items)
+                n.Settings.Add("Choix : " + Property(item, "Name") + " | expression=" + Property(item, "Expression") + " | selection=" + Property(item, "Selected"));
+        }
+        private static void Boundaries(GH_Cluster cluster, Node node, string internalScope)
+        {
+            // The serialized ParamMap is the actual GUID mapping. Never infer it from
+            // hook position, caption or document enumeration order (all can differ).
+            var chunk = new GH_LooseChunk("Cluster");
+            if (!cluster.Write(chunk)) throw new InvalidOperationException("Lecture de la correspondance du cluster impossible.");
+            var map = chunk.FindChunk("ParamMap");
+            if (map == null) throw new InvalidOperationException("Correspondance ParamMap absente.");
+            var lookup = new Dictionary<Guid, Guid>();
+            for (int i = 0; i < map.GetInt32("Count"); i++) lookup[map.GetGuid("Key", i)] = map.GetGuid("Value", i);
+            foreach (var side in new[] { cluster.Params.Input, cluster.Params.Output })
+            {
+                bool input = Object.ReferenceEquals(side, cluster.Params.Input);
+                for (int i = 0; i < side.Count; i++)
+                {
+                    Guid hook;
+                    if (!lookup.TryGetValue(side[i].InstanceGuid, out hook)) throw new InvalidOperationException("Port de cluster sans correspondance : " + side[i].Name);
+                    string id = internalScope + "/" + hook;
+                    string hookType = input ? typeof(GH_ClusterInputHook).FullName : typeof(GH_ClusterOutputHook).FullName;
+                    if (!node.Cluster.Nodes.Any(n => n.Id == id && n.Type == hookType)) throw new InvalidOperationException("Point de passage interne absent ou incoherent : " + hook);
+                    node.BoundaryLinks.Add(new BoundaryLink { Direction = input ? "input" : "output", ExternalPort = i, InternalNode = id });
+                }
+            }
+        }
         public static Graph Read(GH_Document doc, bool selectionOnly)
         {
+            if (selectionOnly) throw new InvalidOperationException("L'export complet porte sur tout le document, sans selection partielle.");
             if (doc == null) throw new InvalidOperationException("Ouvrir un document Grasshopper.");
-            var roots = doc.Objects.Where(o => !(o is RiRComponent) && !(o is Grasshopper.Kernel.Special.GH_Group) && (!selectionOnly || o.Attributes.Selected)).ToList();
-            if (roots.Count == 0) throw new InvalidOperationException("Selectionner les composants a convertir, puis relancer l'analyse.");
-            var graph = new Graph { Document = doc.DisplayName, Host = Rhino.RhinoApp.Version.ToString() };
-            var seen = new HashSet<Guid>();
-            Action<IGH_DocumentObject> add = null;
-            add = o =>
+            return ReadDocument(doc, "main", new HashSet<GH_Document>());
+        }
+        private static Graph ReadDocument(GH_Document doc, string scope, HashSet<GH_Document> stack)
+        {
+            var graph = new Graph { Document = doc.DisplayName, FilePath = doc.FilePath, Scope = scope, Host = Rhino.RhinoApp.Version.ToString() };
+            if (!stack.Add(doc)) { graph.Complete = false; graph.Issues.Add("Reference de document cyclique : contenu deja en cours de lecture."); return graph; }
+            try
             {
-                if (!seen.Add(o.InstanceGuid)) return;
-                var node = new Node {
-                    Id = o.InstanceGuid.ToString(), ComponentGuid = o.ComponentGuid.ToString(),
-                    Name = o.Name, NickName = o.NickName, Type = o.GetType().FullName,
-                    Assembly = o.GetType().Assembly.GetName().FullName, Selected = roots.Contains(o)
-                };
-                node.Description = o.Description;
-                node.Groups.AddRange(doc.Objects.OfType<Grasshopper.Kernel.Special.GH_Group>()
-                    .Where(g => g.ObjectIDs.Contains(o.InstanceGuid)).Select(g => g.NickName));
-                var panel = o as Grasshopper.Kernel.Special.GH_Panel;
-                if (panel != null && panel.SourceCount == 0) node.SourceText = panel.UserText;
-                graph.Nodes.Add(node);
-                var component = o as IGH_Component;
-                var parameter = o as IGH_Param;
-                if (component != null)
+                var groups = doc.Objects.OfType<GH_Group>().ToList();
+                foreach (var group in groups)
+                    graph.Groups.Add(new GroupRecord { Id = scope + "/" + group.InstanceGuid, Name = group.NickName, Members = group.ObjectIDs.Select(id => scope + "/" + id).ToList() });
+                foreach (var o in doc.Objects.Where(o => !(o is RiRComponent) && !(o is GH_Group)))
                 {
-                    node.Inputs.AddRange(component.Params.Input.Select(ReadPort));
-                    node.Outputs.AddRange(component.Params.Output.Select(p => p.Name));
-                    if (component.Params.Input.Any(p => p.Locked) || component.Params.Output.Any(p => p.Locked || p.Reverse || p.Simplify || p.DataMapping != GH_DataMapping.None))
-                        node.Issues.Add("Parametre desactive ou modificateur de sortie non traduit.");
-                    string operation;
-                    if (Rules.TryGetValue(node.Type, out operation) && o.GetType().Assembly.GetName().Name == "MathComponents") node.Operation = operation;
-                    if (component.Params.Input.Count < 2 && node.Operation != null) node.Issues.Add("Nombre d'entrees arithmetiques inattendu.");
-                    if (component.Hidden) { /* Preview visibility does not change computation. */ }
-                    foreach (var input in component.Params.Input)
-                        foreach (var source in input.Sources) add(Owner(source));
-                }
-                else if (parameter != null)
-                {
-                    node.Outputs.Add(parameter.Name);
-                    if (node.Type == "Grasshopper.Kernel.Special.GH_NumberSlider")
+                    var n = new Node { Id = scope + "/" + o.InstanceGuid, InstanceGuid = o.InstanceGuid.ToString(), Name = o.Name, NickName = o.NickName,
+                        Type = o.GetType().FullName, ComponentGuid = o.ComponentGuid.ToString(), Assembly = o.GetType().Assembly.GetName().FullName,
+                        Description = o.Description, Selected = o.Attributes != null && o.Attributes.Selected };
+                    graph.Nodes.Add(n);
+                    try
                     {
-                        node.Operation = "constant";
-                        node.Literal = PythonEmitter.ScalarLiteral(Property(o, "CurrentValue"));
-                    }
-                    else if (node.Type == "Grasshopper.Kernel.Special.GH_BooleanToggle")
-                    {
-                        node.Operation = "constant";
-                        node.Literal = PythonEmitter.ScalarLiteral(Property(o, "Value"));
-                    }
-                    else
-                    {
-                        // Typed parameters can coerce values; only generic pass-through is safe here.
-                        if (node.Type == "Grasshopper.Kernel.Parameters.Param_GenericObject")
+                        var membership = new HashSet<Guid> { o.InstanceGuid };
+                        bool changed;
+                        do { changed = false; foreach (var group in groups) if (group.ObjectIDs.Any(membership.Contains) && membership.Add(group.InstanceGuid)) changed = true; } while (changed);
+                        foreach (var group in groups.Where(g => membership.Contains(g.InstanceGuid))) { n.Groups.Add(group.NickName); n.GroupIds.Add(scope + "/" + group.InstanceGuid); }
+                        var active = o as IGH_ActiveObject; n.Locked = active != null && active.Locked;
+                        var component = o as IGH_Component;
+                        var parameter = o as IGH_Param;
+                        if (component != null)
                         {
-                            node.Operation = parameter.SourceCount == 0 ? "constant" : "identity";
-                            if (parameter.SourceCount == 0) node.Literal = PersistentScalar(parameter);
+                            n.Inputs.AddRange(component.Params.Input.Select(p => ReadPort(p, scope, true)));
+                            n.Outputs.AddRange(component.Params.Output.Select(p => p.Name));
+                            n.OutputPorts.AddRange(component.Params.Output.Select(p => ReadPort(p, scope, false)));
                         }
-                        if (parameter.SourceCount > 0) node.Inputs.Add(ReadPort(parameter));
+                        else if (parameter != null)
+                        {
+                            n.Inputs.Add(ReadPort(parameter, scope, true));
+                            n.Outputs.Add(parameter.Name); n.OutputPorts.Add(ReadPort(parameter, scope, false));
+                        }
+                        var panel = o as GH_Panel; if (panel != null) n.SourceText = panel.UserText;
+                        Settings(o, n);
+                        var cluster = o as GH_Cluster;
+                        n.IsCluster = cluster != null || o.GetType().Name == "GH_Cluster_OBSOLETE";
+                        if (n.IsCluster)
+                        {
+                            var inner = cluster != null ? cluster.Document("") : Property(o, "InternalDocument") as GH_Document;
+                            if (inner == null) throw new InvalidOperationException("Cluster protege ou document interne inaccessible. Aucun contenu invente.");
+                            if (stack.Count >= 128) throw new InvalidOperationException("Profondeur de securite 128 atteinte : extraction incomplete.");
+                            n.Cluster = ReadDocument(inner, n.Id, stack);
+                            if (!n.Cluster.Complete) graph.Complete = false;
+                            if (cluster != null) Boundaries(cluster, n, n.Id);
+                            else throw new InvalidOperationException("Ancien cluster : correspondances externes/internes non disponibles.");
+                        }
+                        foreach (var p in n.Inputs.Concat(n.OutputPorts))
+                            if (new[] { p.Persistent, p.Volatile }.Any(d => d.Status == "partial" || d.Status == "error"))
+                            { graph.Complete = false; n.Issues.Add("Valeurs partiellement illisibles sur le port " + p.Name); }
                     }
-                    if (!String.IsNullOrEmpty(Convert.ToString(Property(parameter, "Expression"), CultureInfo.InvariantCulture)))
-                        node.Issues.Add("Expression du parametre non traduite.");
-                    if (parameter.Reverse || parameter.Simplify || parameter.DataMapping != GH_DataMapping.None)
-                        node.Issues.Add("Modificateur du parametre non traduit.");
-                    foreach (var source in parameter.Sources) add(Owner(source));
+                    catch (Exception ex) { n.Issues.Add(Error(ex)); graph.Complete = false; }
                 }
-                else node.Issues.Add("Objet non pris en charge (cluster, script ou objet special).");
-                var active = o as IGH_ActiveObject;
-                if (active != null && active.Locked) node.Issues.Add("Objet desactive : comportement non traduit.");
-            };
-            foreach (var root in roots) add(root);
+            }
+            finally { stack.Remove(doc); }
+            var ids = new HashSet<string>(graph.Nodes.Select(n => n.Id));
+            foreach (var node in graph.Nodes)
+                foreach (var wire in node.Inputs.SelectMany(p => p.Sources))
+                    if (!ids.Contains(wire.Node) || wire.Output < 0)
+                    { graph.Complete = false; node.Issues.Add("Connexion non resolue : " + wire.Node + ", sortie " + wire.Output); }
             return graph;
         }
     }

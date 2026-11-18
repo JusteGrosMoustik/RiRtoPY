@@ -25,7 +25,7 @@ namespace RiRtoPY
     public static class UpdateService
     {
         public const string ReleasesUrl = "https://github.com/JusteGrosMoustik/RiRtoPY/releases";
-        public const string CurrentVersion = "0.4.0";
+        public const string CurrentVersion = "0.5.0";
 
         public static void OpenReleases()
         {

@@ -1,49 +1,51 @@
 # RiRtoPY
 
-Utiliser Grasshopper comme brouillon visuel pour extraire rapidement les fonctionnalites d'un outil et les recoder en Python avec ChatGPT.
+## Objectif unique : relever un fichier Grasshopper pour ChatGPT
 
-## Version 0.4.0 : extraction pour ChatGPT
+La version 0.5.0 exporte les faits contenus dans **tout le document actif** :
 
-L'objectif est de comprendre et reorganiser la logique metier. La priorite est un dossier de reecriture exploitable, meme si les composants ne sont pas traduits automatiquement.
+- nom et chemin du fichier Grasshopper ;
+- tous les composants, noms, surnoms, types, GUID et groupes (y compris groupes englobants) ;
+- tous les clusters accessibles, puis leurs composants, groupes et clusters imbriques, recursivement ;
+- toutes les connexions, indices des ports et ordre des sources ;
+- correspondances entre ports externes du cluster et points de passage internes, relevees par GUID ;
+- textes des Panels, meme connectes, donnees persistantes et donnees volatiles deja disponibles ;
+- chemins de branches, ordre des valeurs, valeurs nulles, types et expressions des parametres ;
+- valeurs des sliders et toggles, bornes des sliders, choix et expressions des listes de valeurs.
 
-1. Selectionner un bloc Grasshopper, ou choisir tout le document dans RiRtoPY.
-2. Ouvrir le menu RiRtoPY ou double-cliquer sur son composant, puis Analyser le graphe.
-3. Cliquer sur Exporter pour ChatGPT.
-4. Donner d'abord le fichier `.brief.md` a ChatGPT, avec le resultat souhaite. Ajouter le JSON pour approfondir une partie.
+Le composant RiRtoPY lui-meme est exclu du releve. Les groupes restent identifies separement des composants. Les identifiants sont prefixes par le chemin du cluster pour distinguer plusieurs instances contenant les memes GUID internes.
 
-Trois fichiers sont produits :
+## Utilisation
 
-- `.brief.md` : demande de reecriture prete, vue d'ensemble, grandes familles de fonctions, entrees, constantes, noms de groupes/libelles, sorties observees, flux entre familles et informations a completer.
-- `.sketch.py` : canevas de conception a reorganiser en fonctions metier avec ChatGPT. Il ne calcule aucun resultat et ne modifie pas Revit.
-- `.graph.json` : annexe detaillee avec objets, ports, connexions, GUID et valeurs effectivement capturees.
+1. Ouvrir le fichier Grasshopper a analyser.
+2. Menu **RiRtoPY > Ouvrir RiRtoPY**, ou double-clic sur son composant.
+3. **Analyser le graphe** pour consulter l'apercu complet.
+4. **Exporter pour ChatGPT** : le document actif est relu au moment de l'export.
+5. Transmettre le fichier Markdown a ChatGPT, et le JSON pour une analyse detaillee.
 
-L'analyse ne lance pas le Solver. Les composants inconnus, clusters, listes et arbres sont documentes sans bloquer le dossier. Les familles sont des regroupements thematiques, pas une preuve d'ordre d'execution ou d'intention utilisateur. L'interieur des clusters et le code des scripts ne sont pas extrapoles. Les textes du graphe sont des donnees de reference, pas des instructions a executer.
+Deux fichiers sont produits :
 
-Les nouvelles analyses capturent les descriptions des objets, leurs groupes directs et le texte des Panels non connectes. Les anciens rapports restent utilisables pour l'extraction, avec leurs informations manquantes signalees. Aucun fichier Grasshopper complet n'est exige pour commencer a travailler a partir d'un rapport existant.
+- `grasshopper.analysis.md` : releve lisible, organisation par document et cluster, inventaire complet et donnees port par port ;
+- `grasshopper.graph.json` : les memes donnees structurees, sans limite volontaire sur le nombre d'elements serialises.
 
-## Installer
+Aucun canevas Python ni demande automatique de reecriture n'est produit. Les textes du fichier sont des donnees de reference, pas des instructions a executer.
 
-Telecharger [RiRtoPY 0.4.0](https://github.com/JusteGrosMoustik/RiRtoPY/releases/tag/v0.4.0), enregistrer le travail, fermer Rhino et Revit, lancer l'installateur puis relancer les logiciels. Installation par utilisateur sans droits administrateur dans `%APPDATA%\Grasshopper\Libraries\RiRtoPY`. Garder une seule copie du plugin.
+## Limites explicites
 
-Le bouton Rechercher une mise a jour utilise les releases GitHub publiques et verifie SHA-256 avant d'ouvrir l'installateur. L'EXE est non signe numeriquement. Le ZIP du plugin permet une installation manuelle ; debloquer le fichier si Windows le demande. Ne pas redistribuer/copier les DLL McNeel ou Autodesk.
+L'outil ne lance pas le Solver, ne modifie pas le graphe ni la maquette Revit. Les valeurs volatiles correspondent au dernier etat disponible : elles peuvent etre vides ou perimees. L'outil ne charge pas des references externes pour obtenir une valeur manquante et ne pretend pas avoir recalcule le fichier.
 
-## Ressources pour la reecriture
+Les donnees complexes (geometrie, elements Revit, objets de plugins) sont representees par leur type et leur texte disponible, sans promesse de serialisation geometrique complete. Le code interne des composants scripts n'est pas extrait. Les clusters proteges ne sont pas contournes : leur presence et leur inaccessibilite sont signalees. Les anciens clusters peuvent etre ouverts sans que la correspondance des ports soit disponible ; cela est signale comme incomplet. Une reference cyclique ou une profondeur de securite de 128 documents interrompt uniquement cette branche et signale l'extraction incomplete.
 
-Les traductions experimentales precedentes restent dans les sources comme ressources de developpement. Elles ne conditionnent plus l'export de l'interface :
+Une erreur de lecture sur un objet ne supprime pas les autres objets du rapport. Les etats `captured`, `empty`, `unavailable`, `partial` et `error` distinguent donnees capturees, vides et illisibles. Aucun contenu n'est volontairement tronque.
 
-- [Bibliotheque Python et limites](docs/GENERAL_NODES.md).
-- [Catalogue de 381 composants RiR, sources officielles et statut](python/node-catalog.json).
-- [Ancien profil de calcul des surfaces de pieces](docs/ROOM_AREAS.md).
-- [Validation et essais manuels restants](docs/VALIDATION.md).
+## Installer et developper
 
-Les exemples d'export executable dans les anciens guides concernent les moteurs experimentaux, pas le nouveau bouton d'extraction. Les fonctions Python aident a recoder ; leur disponibilite ne signifie pas que tout graphe est automatiquement converti.
+Fermer Rhino et Revit apres avoir enregistre le travail, puis lancer `RiRtoPY-Setup-0.5.0.exe`. Installation utilisateur dans `%APPDATA%\Grasshopper\Libraries\RiRtoPY`. Garder une seule copie du plugin. Le bouton de mise a jour conserve la verification SHA-256 des releases GitHub. L'EXE n'est pas signe numeriquement.
 
-## Developper
+Avec Rhino 7 installe : `scripts/build.ps1`, puis `scripts/test.ps1`. Le compilateur .NET Framework suffit. `-ReferenceDirectory` permet de fournir RhinoCommon.dll, Grasshopper.dll et GH_IO.dll separement. Le projet cible net48 et C# 5.
 
-Avec Rhino 7 installe : `scripts/build.ps1` puis `scripts/test.ps1`. Le compilateur .NET Framework Windows suffit. Pour compiler sans Rhino installe, passer `-ReferenceDirectory` avec RhinoCommon.dll, Grasshopper.dll et GH_IO.dll. Le projet Visual Studio vise net48.
+Le plugin et l'installateur n'incluent plus les anciens moteurs de traduction ni de bibliotheque Python. Ces sources restent dans le depot comme historique, avec leurs tests dans `scripts/test-legacy.ps1` ; elles ne font pas partie du fonctionnement de l'outil.
 
-`FunctionalBriefEmitter.cs` produit le dossier et le canevas, `GraphReader.cs` collecte les informations, `Models.cs` definit le rapport, `Plugin.cs` gere l'interface. Les moteurs precedents PythonEmitter/GeneralRevitEmitter/RoomAreaEmitter et leurs tests sont conserves pour la recherche de traductions et la regression.
+Le workflow GitHub compile, teste et publie les nouvelles versions depuis main (installateur, ZIP du plugin et SHA256SUMS.txt). Une release existante n'est jamais remplacee. Voir [Validation](docs/VALIDATION.md) pour les limites des essais et les verifications dans Grasshopper.
 
-Le workflow GitHub compile, teste et publie une nouvelle version depuis main, sans remplacer une release existante. Les releases contiennent installateur, ZIP du plugin, bibliotheque Python et SHA256SUMS.txt.
-
-References de capture : [GH_Group.ObjectIDs](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-group/), [GH_Panel.UserText](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-panel/).
+References de lecture : [GH_Cluster.Document](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-cluster/), [GH_Group](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-group/), [GH_Panel](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-panel/). Le format `ParamMap` est celui observe dans le SDK Rhino 7 ; toute correspondance absente ou incoherente est signalee.

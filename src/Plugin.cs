@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.Serialization.Json;
 using System.Text;
@@ -12,15 +13,15 @@ using Grasshopper.GUI.Canvas;
 using Grasshopper.GUI;
 
 [assembly: AssemblyTitle("RiRtoPY")]
-[assembly: AssemblyVersion("0.4.0.0")]
-[assembly: AssemblyFileVersion("0.4.0.0")]
+[assembly: AssemblyVersion("0.5.0.0")]
+[assembly: AssemblyFileVersion("0.5.0.0")]
 
 namespace RiRtoPY
 {
     public sealed class AssemblyInfo : GH_AssemblyInfo
     {
         public override string Name { get { return "RiRtoPY"; } }
-        public override string Description { get { return "Extraction des fonctionnalites Grasshopper pour reecriture Python avec ChatGPT"; } }
+        public override string Description { get { return "Releve complet Grasshopper pour analyse avec ChatGPT"; } }
         public override Guid Id { get { return new Guid("c94b6862-104b-40a3-a7c4-0ab83504240b"); } }
         public override string AuthorName { get { return "Louhann Brocard"; } }
         public override string AuthorContact { get { return "https://github.com/JusteGrosMoustik/RiRtoPY"; } }
@@ -86,12 +87,10 @@ namespace RiRtoPY
         private static WorkspaceForm instance;
         private readonly TextBox preview;
         private readonly Label status;
-        private readonly CheckBox selection;
         private readonly Button update;
         private readonly Button export;
         private Graph graph;
         private string brief;
-        private string sketch;
 
         public static void ShowWorkspace(bool checkUpdate = false)
         {
@@ -111,16 +110,14 @@ namespace RiRtoPY
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
-            layout.Controls.Add(new Label { Text = "Extrais les fonctionnalites du graphe pour les recoder en Python avec ChatGPT.\nL'export reste disponible avec des composants inconnus : intentions, flux et points a completer.", AutoSize = true },0,0);
+            layout.Controls.Add(new Label { Text = "Exporte le document complet : composants, groupes, clusters imbriques, connexions et valeurs.\nLecture seule, sans lancer le Solver. Les contenus inaccessibles sont signales.", AutoSize = true },0,0);
             var tools = new FlowLayoutPanel { Dock = DockStyle.Fill };
-            selection = new CheckBox { Text = "Selection uniquement", Checked = true, AutoSize = true, Margin = new Padding(3,8,12,3) };
-            tools.Controls.Add(selection);
             var analyze = new Button { Text = "Analyser le graphe", AutoSize = true };
             analyze.Click += (s,e) => Analyze(); tools.Controls.Add(analyze);
             export = new Button { Text = "Exporter pour ChatGPT", AutoSize = true, Enabled = false };
             export.Click += (s,e) => Export(); tools.Controls.Add(export);
             layout.Controls.Add(tools,0,1);
-            preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas",10), BackColor = Color.FromArgb(25,32,41), ForeColor = Color.FromArgb(221,231,240), Text = "Le dossier de reecriture apparaitra ici apres analyse." };
+            preview = new TextBox { Multiline = true, ReadOnly = true, ScrollBars = ScrollBars.Both, WordWrap = false, Dock = DockStyle.Fill, Font = new Font("Consolas",10), BackColor = Color.FromArgb(25,32,41), ForeColor = Color.FromArgb(221,231,240), Text = "Le releve complet apparaitra ici apres analyse." };
             layout.Controls.Add(preview,0,2);
             var updates = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0,8,0,0) };
             update = new Button { Text = "Rechercher une mise a jour", AutoSize = true };
@@ -143,31 +140,31 @@ namespace RiRtoPY
             try
             {
                 var doc = Instances.ActiveCanvas == null ? null : Instances.ActiveCanvas.Document;
-                graph = GraphReader.Read(doc, selection.Checked);
-                brief = FunctionalBriefEmitter.Emit(graph);
-                sketch = FunctionalBriefEmitter.Sketch(graph);
+                graph = GraphReader.Read(doc, false);
+                brief = GraphReportEmitter.Emit(graph);
                 preview.Text = brief.Replace("\r\n", "\n").Replace("\n", "\r\n");
-                status.Text = graph.Nodes.Count + " objets | dossier disponible pour ChatGPT. Les inconnues sont documentees, sans bloquer l'export.";
+                status.Text = GraphReportEmitter.AllNodes(graph).Count() + " objets (clusters inclus) | " + (graph.Complete ? "Releve disponible." : "Extraction incomplete : voir les limites du releve.");
                 export.Enabled = true;
             }
-            catch (Exception ex) { graph = null; brief = null; sketch = null; export.Enabled = false; status.Text = ex.Message; }
+            catch (Exception ex) { graph = null; brief = null; export.Enabled = false; status.Text = ex.Message; }
         }
         private void Export()
         {
+            Analyze(); // Capture the active document again: never export a stale preview.
             if (graph == null) return;
-            using (var dialog = new SaveFileDialog { Filter = "Dossier pour ChatGPT (*.md)|*.md", FileName = "rir_to_python.brief.md", OverwritePrompt = true })
+            using (var dialog = new SaveFileDialog { Filter = "Dossier pour ChatGPT (*.md)|*.md", FileName = "grasshopper.analysis.md", OverwritePrompt = true })
             {
                 if (dialog.ShowDialog(this) != DialogResult.OK) return;
                 try
                 {
                     string stem = Path.Combine(Path.GetDirectoryName(dialog.FileName), Path.GetFileNameWithoutExtension(dialog.FileName));
-                    if (stem.EndsWith(".brief", StringComparison.OrdinalIgnoreCase)) stem = stem.Substring(0, stem.Length - 6);
-                    string report = stem + ".graph.json", pythonPath = stem + ".sketch.py";
-                    if ((File.Exists(report) || File.Exists(pythonPath)) && MessageBox.Show(this, "Remplacer aussi le JSON et le canevas Python associes ?", "RiRtoPY", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
-                    using (var stream = File.Create(report)) new DataContractJsonSerializer(typeof(Graph)).WriteObject(stream, graph);
-                    File.WriteAllText(pythonPath, sketch, new UTF8Encoding(false));
+                    if (stem.EndsWith(".analysis", StringComparison.OrdinalIgnoreCase)) stem = stem.Substring(0, stem.Length - 9);
+                    string report = stem + ".graph.json";
+                    if (File.Exists(report) && MessageBox.Show(this, "Remplacer aussi le JSON associe ?", "RiRtoPY", MessageBoxButtons.YesNo) != DialogResult.Yes) return;
+                    using (var stream = File.Create(report))
+                        GraphReportEmitter.WriteJson(stream, graph);
                     File.WriteAllText(dialog.FileName, brief, new UTF8Encoding(false));
-                    status.Text = "Dossier ChatGPT, canevas Python et JSON exportes. Transmets d'abord le dossier .md a ChatGPT.";
+                    status.Text = "Releve Markdown et JSON exportes. Transmettre le .md a ChatGPT pour analyser le fichier.";
                 }
                 catch (Exception ex) { MessageBox.Show(this, ex.Message, "Export impossible"); }
             }
