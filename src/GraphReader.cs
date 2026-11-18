@@ -13,6 +13,10 @@ namespace RiRtoPY
     // Read-only snapshot. Never collects data, solves, expires or modifies the document.
     public static class GraphReader
     {
+        private sealed class SolutionStamp { public string LastUtc; }
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<GH_Document,SolutionStamp> Stamps = new System.Runtime.CompilerServices.ConditionalWeakTable<GH_Document,SolutionStamp>();
+        private static SolutionStamp Observe(GH_Document doc)
+        {return Stamps.GetValue(doc,d=>{var stamp=new SolutionStamp();d.SolutionEnd+=(sender,args)=>{stamp.LastUtc=DateTime.UtcNow.ToString("o");};return stamp;});}
         private static object Property(object value, string name)
         {
             if (value == null) return null;
@@ -20,6 +24,24 @@ namespace RiRtoPY
             return p == null ? null : p.GetValue(value, null);
         }
         private static string Error(Exception ex) { return (ex.InnerException ?? ex).Message; }
+        private static CanvasInfo Canvas(IGH_DocumentObject obj)
+        {
+            if(obj.Attributes==null)return new CanvasInfo { Status="unavailable",Reason="Attributs visuels absents." };
+            var a=obj.Attributes;var box=a.Bounds;
+            return new CanvasInfo { Status=box.IsEmpty?"partial":"captured",Reason=box.IsEmpty?"Limites visuelles non calculees ; pivot seulement.":null,X=a.Pivot.X,Y=a.Pivot.Y,Left=box.Left,Top=box.Top,Width=box.Width,Height=box.Height };
+        }
+        private static string GroupName(GH_Group group)
+        { return String.IsNullOrWhiteSpace(group.NickName)?"Groupe sans nom ["+group.InstanceGuid.ToString().Substring(0,8)+"]":group.NickName; }
+        private static Dictionary<string,string> ScriptArchive(IGH_DocumentObject obj)
+        {
+            var chunk=new GH_LooseChunk("Script");
+            if(!obj.Write(chunk))throw new InvalidOperationException("Serialisation du composant script refusee.");
+            var result=new Dictionary<string,string>();
+            foreach(var key in new[]{"UsingSource","ScriptSource","AdditionalSource"})if(chunk.ItemExists(key))result[key]=chunk.GetString(key);
+            int count=chunk.ItemExists("ReferenceCount")?chunk.GetInt32("ReferenceCount"):0;
+            for(int i=0;i<count;i++)result["Reference["+i+"]"]=chunk.GetString("Reference",i);
+            return result;
+        }
         private static IGH_DocumentObject Owner(IGH_Param p)
         { return p.Attributes == null ? p : p.Attributes.GetTopLevel.DocObject; }
 
@@ -42,6 +64,7 @@ namespace RiRtoPY
                         branch.Values.Add(item);
                         try { item.Text = value == null ? null : Convert.ToString(value, CultureInfo.InvariantCulture); }
                         catch (Exception ex) { result.Status = "partial"; result.Error = Error(ex); }
+                        if(value!=null)item.Geometry=GeometryCapture.Read(value);
                     }
                 }
             }
@@ -53,6 +76,7 @@ namespace RiRtoPY
             var result = new Port {
                 Id = scope + "/" + p.InstanceGuid, Name = p.Name, NickName = p.NickName,
                 Description = p.Description, Type = p.GetType().FullName,
+                TypeHint=Convert.ToString(Property(p,"TypeHint"),CultureInfo.InvariantCulture),Locked=p.Locked,
                 Optional = p.Optional, Access = p.Access.ToString().ToLowerInvariant(),
                 Mapping = p.DataMapping.ToString(), Reverse = p.Reverse, Simplify = p.Simplify,
                 Expression = Convert.ToString(Property(p, "Expression"), CultureInfo.InvariantCulture),
@@ -110,17 +134,25 @@ namespace RiRtoPY
         {
             if (selectionOnly) throw new InvalidOperationException("L'export complet porte sur tout le document, sans selection partielle.");
             if (doc == null) throw new InvalidOperationException("Ouvrir un document Grasshopper.");
-            return ReadDocument(doc, "main", new HashSet<GH_Document>());
+            var result=ReadDocument(doc, "main", new HashSet<GH_Document>());
+            GraphAnalysis.Audit(result);
+            return result;
         }
         private static Graph ReadDocument(GH_Document doc, string scope, HashSet<GH_Document> stack)
         {
             var graph = new Graph { Document = doc.DisplayName, FilePath = doc.FilePath, Scope = scope, Host = Rhino.RhinoApp.Version.ToString() };
+            graph.Capture=new CaptureState { CapturedAtUtc=DateTime.UtcNow.ToString("o"),RhinoVersion=graph.Host,
+                GrasshopperVersion=typeof(GH_Document).Assembly.GetName().Version.ToString(),Modified=doc.IsModified,
+                SavedFile=doc.IsFilePathDefined,SolutionState=doc.SolutionState.ToString(),
+                LastSolutionUtc=Observe(doc).LastUtc,DocumentId=doc.DocumentID.ToString(),
+                ModelUnits=Rhino.RhinoDoc.ActiveDoc==null?"unknown":Rhino.RhinoDoc.ActiveDoc.ModelUnitSystem.ToString() };
             if (!stack.Add(doc)) { graph.Complete = false; graph.Issues.Add("Reference de document cyclique : contenu deja en cours de lecture."); return graph; }
             try
             {
                 var groups = doc.Objects.OfType<GH_Group>().ToList();
                 foreach (var group in groups)
-                    graph.Groups.Add(new GroupRecord { Id = scope + "/" + group.InstanceGuid, Name = group.NickName, Members = group.ObjectIDs.Select(id => scope + "/" + id).ToList() });
+                    graph.Groups.Add(new GroupRecord { Id = scope + "/" + group.InstanceGuid, Name = GroupName(group),RawName=group.NickName,
+                        Description=group.Description,Colour=group.Colour.ToArgb().ToString("X8"),Border=group.Border.ToString(),Canvas=Canvas(group),Members = group.ObjectIDs.Select(id => scope + "/" + id).ToList() });
                 foreach (var o in doc.Objects.Where(o => !(o is RiRComponent) && !(o is GH_Group)))
                 {
                     var n = new Node { Id = scope + "/" + o.InstanceGuid, InstanceGuid = o.InstanceGuid.ToString(), Name = o.Name, NickName = o.NickName,
@@ -129,11 +161,22 @@ namespace RiRtoPY
                     graph.Nodes.Add(n);
                     try
                     {
+                        n.Canvas=Canvas(o);
+                        var scribble=o as GH_Scribble;
+                        if(scribble!=null){n.Annotation=scribble.Text;n.AnnotationFont=scribble.Font.ToString();foreach(var corner in scribble.Corners){n.AnnotationCorners.Add(corner.X);n.AnnotationCorners.Add(corner.Y);}}
+                        if(o is IGH_Component)n.Script=ScriptExtractor.Read(o,n.Type,()=>ScriptArchive(o));
+                        if(n.Script!=null&&n.Script.Status!="captured"&&n.Script.Status!="empty")
+                            n.Issues.Add("Source script "+n.Script.Status+" : "+n.Script.Reason);
                         var membership = new HashSet<Guid> { o.InstanceGuid };
                         bool changed;
                         do { changed = false; foreach (var group in groups) if (group.ObjectIDs.Any(membership.Contains) && membership.Add(group.InstanceGuid)) changed = true; } while (changed);
-                        foreach (var group in groups.Where(g => membership.Contains(g.InstanceGuid))) { n.Groups.Add(group.NickName); n.GroupIds.Add(scope + "/" + group.InstanceGuid); }
+                        foreach (var group in groups.Where(g => membership.Contains(g.InstanceGuid))) { n.Groups.Add(GroupName(group)); n.GroupIds.Add(scope + "/" + group.InstanceGuid); }
                         var active = o as IGH_ActiveObject; n.Locked = active != null && active.Locked;
+                        if(active!=null)
+                        {
+                            try { n.RuntimeErrors.AddRange(active.RuntimeMessages(GH_RuntimeMessageLevel.Error));n.RuntimeWarnings.AddRange(active.RuntimeMessages(GH_RuntimeMessageLevel.Warning));n.RuntimeStatus="cached; no solver run"; }
+                            catch(Exception ex){n.RuntimeStatus="unavailable: "+Error(ex);n.Issues.Add("Lecture des messages runtime impossible : "+Error(ex));}
+                        }
                         var component = o as IGH_Component;
                         var parameter = o as IGH_Param;
                         if (component != null)
@@ -169,11 +212,9 @@ namespace RiRtoPY
                 }
             }
             finally { stack.Remove(doc); }
-            var ids = new HashSet<string>(graph.Nodes.Select(n => n.Id));
-            foreach (var node in graph.Nodes)
-                foreach (var wire in node.Inputs.SelectMany(p => p.Sources))
-                    if (!ids.Contains(wire.Node) || wire.Output < 0)
-                    { graph.Complete = false; node.Issues.Add("Connexion non resolue : " + wire.Node + ", sortie " + wire.Output); }
+            graph.Capture.FinishedAtUtc=DateTime.UtcNow.ToString("o");
+            if(graph.Capture.LastSolutionUtc!=Observe(doc).LastUtc||graph.Capture.SolutionState!=doc.SolutionState.ToString())
+                graph.Issues.Add("Etat de solution modifie pendant la lecture : instantane non atomique, reexporter apres stabilisation.");
             return graph;
         }
     }

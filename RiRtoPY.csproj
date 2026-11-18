@@ -10,6 +10,11 @@
   <ItemGroup>
     <Compile Include="src\Models.cs" />
     <Compile Include="src\GraphReader.cs" />
+    <Compile Include="src\ScriptExtractor.cs" />
+    <Compile Include="src\GeometryCapture.cs" />
+    <Compile Include="src\GraphAnalysis.cs" />
+    <Compile Include="src\CompactReport.cs" />
+    <Compile Include="src\ExportPrivacy.cs" />
     <Compile Include="src\GraphReportEmitter.cs" />
     <Compile Include="src\Plugin.cs" />
     <Compile Include="src\UpdateService.cs" />

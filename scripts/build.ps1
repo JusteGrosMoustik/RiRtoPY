@@ -28,7 +28,7 @@ if ($ReferenceDirectory) {
 foreach ($reference in @($rhino,$gh,$ghio)) {
     if (!(Test-Path -LiteralPath $reference)) { throw "Reference introuvable : $reference" }
 }
-$sources = @('Models.cs','GraphReader.cs','GraphReportEmitter.cs','Plugin.cs','UpdateService.cs') | ForEach-Object { Join-Path $root ('src\' + $_) }
+$sources = @('Models.cs','GraphReader.cs','GraphReportEmitter.cs','ScriptExtractor.cs','GeometryCapture.cs','GraphAnalysis.cs','CompactReport.cs','ExportPrivacy.cs','Plugin.cs','UpdateService.cs') | ForEach-Object { Join-Path $root ('src\' + $_) }
 $plugin = Join-Path $payload 'RiRtoPY.gha'
 $argsCompiler = @('/nologo','/target:library','/optimize+','/codepage:65001',"/out:$plugin", "/reference:$rhino", "/reference:$gh", "/reference:$ghio", '/reference:System.Drawing.dll', '/reference:System.Windows.Forms.dll', '/reference:System.Runtime.Serialization.dll', '/reference:System.Net.Http.dll') + $sources
 & $compiler @argsCompiler

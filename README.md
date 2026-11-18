@@ -1,51 +1,67 @@
 # RiRtoPY
 
-## Objectif unique : relever un fichier Grasshopper pour ChatGPT
+## Objectif : preparer une conversion Grasshopper vers Python fidele et efficace
 
-La version 0.5.0 exporte les faits contenus dans **tout le document actif** :
+La version 0.6.0 rassemble ce dont ChatGPT/Codex a besoin pour comprendre puis transcrire un fichier Grasshopper en Python : algorithmes personnalises, interfaces des modules, contrats des ports, donnees, connexions, annotations, geometrie et limites connues.
 
-- nom et chemin du fichier Grasshopper ;
-- tous les composants, noms, surnoms, types, GUID et groupes (y compris groupes englobants) ;
-- tous les clusters accessibles, puis leurs composants, groupes et clusters imbriques, recursivement ;
-- toutes les connexions, indices des ports et ordre des sources ;
-- correspondances entre ports externes du cluster et points de passage internes, relevees par GUID ;
-- textes des Panels, meme connectes, donnees persistantes et donnees volatiles deja disponibles ;
-- chemins de branches, ordre des valeurs, valeurs nulles, types et expressions des parametres ;
-- valeurs des sliders et toggles, bornes des sliders, choix et expressions des listes de valeurs.
-
-Le composant RiRtoPY lui-meme est exclu du releve. Les groupes restent identifies separement des composants. Les identifiants sont prefixes par le chemin du cluster pour distinguer plusieurs instances contenant les memes GUID internes.
+Le dossier doit permettre de produire des fonctions Python avec des entrees/sorties explicites et de retrouver les composants sources. Il ne pretend pas que des resultats volatiles non recalculés valident une conversion. L'hote Python cible (Rhino, Rhino.Inside/Revit ou autonome), les unites et les API restent a confirmer avant la transcription.
 
 ## Utilisation
 
-1. Ouvrir le fichier Grasshopper a analyser.
-2. Menu **RiRtoPY > Ouvrir RiRtoPY**, ou double-clic sur son composant.
-3. **Analyser le graphe** pour consulter l'apercu complet.
-4. **Exporter pour ChatGPT** : le document actif est relu au moment de l'export.
-5. Transmettre le fichier Markdown a ChatGPT, et le JSON pour une analyse detaillee.
+1. Ouvrir le fichier Grasshopper, puis **RiRtoPY > Ouvrir RiRtoPY**.
+2. **Analyser le graphe**. L'outil lit tout le document et descend dans les clusters accessibles, sans lancer le Solver.
+3. Choisir le rapport : **Vue d'ensemble**, **Analyse fonctionnelle** (par defaut), ou **Exhaustif**.
+4. Pour isoler un calcul, choisir une sortie dans **Perimetre**. L'outil remonte ses dependances, y compris a travers les points de passage des clusters. Les dependances internes d'un composant restent conservatrices : chaque entree peut influencer chaque sortie.
+5. Choisir les filtres de confidentialite et relire l'apercu. **Masquer les chemins** est active par defaut ; **Exclure les valeurs et expressions** et **Exclure les codes sources** sont facultatifs.
+6. **Exporter pour ChatGPT** relit le document actif, affiche une confirmation des filtres puis ecrit localement trois fichiers. Aucun envoi automatique a un service externe.
 
-Deux fichiers sont produits :
+| Fichier | Utilisation pour la conversion |
+|---|---|
+| `grasshopper.overview.md` | Bilan court, modules observes, entrees/sorties candidates, plugins et principales alertes |
+| `grasshopper.analysis.md` | Rapport du niveau choisi ; par defaut interfaces des futures fonctions Python, annotations, extraits des scripts, parametres et connexions compactes |
+| `grasshopper.graph.json` | Detail structure complet dans le perimetre et selon les filtres choisis : sources integrales autorisees, ports, arbres, geometrie et diagnostics |
 
-- `grasshopper.analysis.md` : releve lisible, organisation par document et cluster, inventaire complet et donnees port par port ;
-- `grasshopper.graph.json` : les memes donnees structurees, sans limite volontaire sur le nombre d'elements serialises.
+Donner d'abord les deux Markdown a ChatGPT/Codex. Ajouter le JSON pour transcrire ou verifier un module precis. Les reperes `Nxxxx` et identifiants scopes permettent de retrouver les objets d'origine. Les extraits raccourcis sont explicitement marques ; le JSON conserve leur detail autorise. Aucun ancien canevas de conversion automatique n'est ajoute.
 
-Aucun canevas Python ni demande automatique de reecriture n'est produit. Les textes du fichier sont des donnees de reference, pas des instructions a executer.
+## Contenu de la capture
 
-## Limites explicites
+- Nom et chemin du fichier, versions Rhino/Grasshopper, horodatages de debut/fin, etat modifie/enregistre et etat du Solver observe.
+- Composants, noms, surnoms, GUID, positions et dimensions du canvas.
+- Groupes : nom brut, identifiant, couleur ARGB, bordure, limites et membres. Un groupe sans nom garde son nom brut vide et recoit un libelle technique stable ; aucune intention n'est inventee.
+- Scribbles : texte exact, police et quatre coins. Panels : texte, donnees persistantes et dernier contenu volatile disponible, meme connectes.
+- Sliders, toggles et listes de valeurs ; contrats des ports, hints de types, acces item/list/tree, expressions, graft/flatten, reverse, simplify et desactivation.
+- Clusters accessibles et imbriques, identifiants prefixes par instance, connexions avec indices et ordre des sources, correspondances externes/internes relevees par GUID.
+- Scripts VB.NET/C# anciens : code principal, imports, code additionnel et references via proprietes connues ou archive de composant. GhPython : source embarquee et indication du code fourni par entree. RhinoCode recent : texte et langage via l'interface exposee. Chaque script a un adaptateur, une version, un statut et une raison si la source manque.
+- Geometrie disponible : courbes (longueur, domaine, extremites, tangentes, fermeture, rayon d'arc si reconnu), surfaces (domaines UV, taille estimee, aire, normale au milieu UV), Breps (validite, faces, aretes, fermeture/solidite, orientation, aire, volume si solide), maillages (comptages, fermeture, aire), points, vecteurs, lignes, arcs et reperes. Bounding box mondiale XYZ pour les objets Rhino disponibles. Les mesures utilisent les unites natives Rhino, indiquees dans la capture.
+- Diagnostics separes : `extraction`, `runtime`, `coherence`. La synthese globale remonte les limites des clusters internes. Une erreur de calcul Grasshopper n'est pas assimilee a un echec de lecture.
 
-L'outil ne lance pas le Solver, ne modifie pas le graphe ni la maquette Revit. Les valeurs volatiles correspondent au dernier etat disponible : elles peuvent etre vides ou perimees. L'outil ne charge pas des references externes pour obtenir une valeur manquante et ne pretend pas avoir recalcule le fichier.
+## Comparer deux etats
 
-Les donnees complexes (geometrie, elements Revit, objets de plugins) sont representees par leur type et leur texte disponible, sans promesse de serialisation geometrique complete. Le code interne des composants scripts n'est pas extrait. Les clusters proteges ne sont pas contournes : leur presence et leur inaccessibilite sont signalees. Les anciens clusters peuvent etre ouverts sans que la correspondance des ports soit disponible ; cela est signale comme incomplet. Une reference cyclique ou une profondeur de securite de 128 documents interrompt uniquement cette branche et signale l'extraction incomplete.
+**Comparer deux captures JSON** demande le fichier avant puis le fichier apres, affiche et permet d'enregistrer une comparaison Markdown. Elle distingue ajouts/suppressions, cablage, parametres/code/annotations, organisation du canvas et instantanes volatils. La correspondance utilise les identifiants scopes : des GUID regeneres ou des perimetres/filtres differents limitent l'interpretation. Une difference de valeurs volatiles ne prouve pas qu'un nouveau calcul a eu lieu. Les captures 0.5.0 sont lisibles ; les informations absentes ne sont pas recuperees artificiellement.
 
-Une erreur de lecture sur un objet ne supprime pas les autres objets du rapport. Les etats `captured`, `empty`, `unavailable`, `partial` et `error` distinguent donnees capturees, vides et illisibles. Aucun contenu n'est volontairement tronque.
+## Limites et confidentialite
 
-## Installer et developper
+Les modules et interfaces proposes sont des regroupements structurels derives des groupes, clusters et fils. Ils doivent etre confirmes avant d'en faire des fonctions Python. L'outil n'invente pas les formules d'un script absent ou le contenu d'un cluster protege.
 
-Fermer Rhino et Revit apres avoir enregistre le travail, puis lancer `RiRtoPY-Setup-0.5.0.exe`. Installation utilisateur dans `%APPDATA%\Grasshopper\Libraries\RiRtoPY`. Garder une seule copie du plugin. Le bouton de mise a jour conserve la verification SHA-256 des releases GitHub. L'EXE n'est pas signe numeriquement.
+Les scripts externes references par chemin ne sont pas ouverts, les protections de cluster ne sont pas contournees, les geometries referencees non chargees ne sont pas resolues. Les geometries sont resumees, pas serialisables a l'identique depuis ce seul dossier. La normale d'une surface est un echantillon au milieu UV ; ces resumes ne prouvent pas a eux seuls la continuite, l'absence de collision ou la conformite d'une rampe.
 
-Avec Rhino 7 installe : `scripts/build.ps1`, puis `scripts/test.ps1`. Le compilateur .NET Framework suffit. `-ReferenceDirectory` permet de fournir RhinoCommon.dll, Grasshopper.dll et GH_IO.dll separement. Le projet cible net48 et C# 5.
+Les donnees volatiles et messages runtime sont les derniers caches accessibles. Le dernier calcul UTC est inconnu au premier contact ; l'outil observe ensuite les fins de solution sans les provoquer. Un changement d'etat du Solver pendant la lecture signale une capture non atomique. `Complete` concerne les erreurs d'extraction et de coherence dans le perimetre, pas la validite du calcul ni de la future conversion Python. Les avertissements de geometrie restent visibles.
 
-Le plugin et l'installateur n'incluent plus les anciens moteurs de traduction ni de bibliotheque Python. Ces sources restent dans le depot comme historique, avec leurs tests dans `scripts/test-legacy.ps1` ; elles ne font pas partie du fonctionnement de l'outil.
+Le masquage parcourt aussi scripts, references et textes, mais ne garantit pas l'anonymat : noms et annotations restent visibles. Il peut remplacer toute la fin d'une ligne contenant un chemin. Les sources ainsi masquees ne sont plus des copies executables exactes ; les filtres et omissions sont annonces dans le rapport. L'exclusion des valeurs supprime aussi les expressions et reglages ; le code conserve peut contenir ses propres constantes tant que l'exclusion des sources n'est pas cochee. Relire avant partage.
 
-Le workflow GitHub compile, teste et publie les nouvelles versions depuis main (installateur, ZIP du plugin et SHA256SUMS.txt). Une release existante n'est jamais remplacee. Voir [Validation](docs/VALIDATION.md) pour les limites des essais et les verifications dans Grasshopper.
+Une reference cyclique ou une profondeur de 128 documents interrompt cette branche avec un diagnostic. Les autres branches restent exportables. Les representations textuelles d'objets complexes restent typees et leurs limites signalees.
 
-References de lecture : [GH_Cluster.Document](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-cluster/), [GH_Group](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-group/), [GH_Panel](https://developer.rhino3d.com/api/gh1/type/grasshopper.kernel.special.gh-panel/). Le format `ParamMap` est celui observe dans le SDK Rhino 7 ; toute correspondance absente ou incoherente est signalee.
+## Installation et developpement
+
+Fermer Rhino/Revit apres sauvegarde, puis lancer `RiRtoPY-Setup-0.6.0.exe`. Installation utilisateur dans `%APPDATA%\Grasshopper\Libraries\RiRtoPY`. Le bouton de mise a jour utilise les releases GitHub et verifie SHA-256 ; l'EXE n'est pas signe numeriquement. Garder une seule copie du plugin.
+
+```
+scripts/build.ps1
+scripts/test.ps1
+scripts/test-geometry.ps1
+scripts/test-reference.ps1 -ReferenceFile 'chemin\Rampe1.61.gh' -RampeBaseline
+```
+
+Le build et le test geometrique acceptent `-ReferenceDirectory` pour les SDK RhinoCommon.dll, Grasshopper.dll et GH_IO.dll. Projet net48/C# 5. Les anciens moteurs de traduction restent uniquement dans les sources historiques, hors distribution. Voir [Validation](docs/VALIDATION.md) pour les preuves et essais restant a faire dans Grasshopper.
+
+Le fichier de reference et ses donnees de travail restent hors Git (`work/`). Les releases ne contiennent aucun document utilisateur.

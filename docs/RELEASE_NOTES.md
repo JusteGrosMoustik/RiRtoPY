@@ -1,18 +1,16 @@
-# RiRtoPY 0.5.0 : releve complet pour analyse avec ChatGPT
+# RiRtoPY 0.6.0 : preparer une conversion Python mieux documentee
 
-Objectif unique : transmettre le fichier Grasshopper a ChatGPT sous une forme lisible et structuree.
+Le rapport par defaut est maintenant une analyse fonctionnelle compacte orientee conversion Python : modules observes, interfaces candidates, dependances, contrats item/list/tree, types et modificateurs, code personnalise et donnees utiles. Un niveau Vue d'ensemble et un niveau Exhaustif completent le JSON detaille.
 
-- Export du document complet, sans filtre de selection.
-- Inventaire des composants et de leurs groupes, y compris groupes englobants.
-- Descente recursive dans les clusters accessibles et leurs clusters imbriques.
-- Identifiants scopes par instance de cluster pour eviter les collisions.
-- Connexions port par port et correspondances externes/internes lues dans ParamMap.
-- Panels connectes et non connectes, sliders, toggles, listes de valeurs.
-- Donnees persistantes et volatiles, branches, types, nulls, expressions et modificateurs.
-- Markdown exhaustif et JSON indente ; plus de canevas ni de bibliotheque Python dans la distribution.
-- Document relu a l'export pour eviter une capture perimee dans l'apercu.
-- Erreurs, clusters proteges et references non resolues signales comme extraction incomplete.
+- Extraction explicite des sources VB/C# historiques, GhPython et RhinoCode, avec adaptateur/version et raisons d'echec.
+- Textes des Scribbles, police, coins, groupes sans nom clairement identifies, couleurs et positions du canvas.
+- Diagnostics globaux separes entre extraction, messages runtime caches et coherence des connexions.
+- Remontee des dependances d'une sortie, y compris a travers les clusters imbriques.
+- Resumes geometriques de courbes, surfaces, Breps, maillages et reperes deja disponibles, sans resoudre de references externes.
+- Horodatages, versions, etat du fichier et du Solver ; dernier calcul connu uniquement s'il a ete observe par l'outil.
+- Comparaison de deux captures JSON : cablage, parametres/scripts, annotations, disposition et valeurs volatiles.
+- Chemins masques par defaut, exclusions facultatives des valeurs/expressions et des sources, apercu et confirmation avant export local.
 
-Compilation locale plugin/installateur et 22 assertions automatiques reussies sur les rapports et leur serialisation. La capture dans une vraie session Grasshopper et les correspondances des ports sur un fichier reel restent a valider. Aucun calcul Grasshopper ni aucune modification Revit n'a ete effectue.
+Validation locale : 70 assertions de rapport/analyse/confidentialite et 4 assertions geometriques simples ; compilation plugin/installateur reussie. Lecture native-free de l'archive Rampe : 938 objets hors groupes, 157 Scribbles, sources exactes des 14 scripts, 15 clusters dont 11 ouverts et 4 proteges ; 926 references resolues et une reference archive orpheline connue. Ces controles ne prouvent pas l'execution du lecteur ni les mesures de courbes/surfaces/Breps dans une session Rhino. Aucun Solver ni document Revit n'a ete execute.
 
-Installer apres sauvegarde et fermeture de Rhino/Revit, puis relancer les logiciels.
+Installer apres sauvegarde et fermeture de Rhino/Revit. La conversion Python reste une etape ulterieure, a verifier sur les entrees/sorties du fichier de reference.

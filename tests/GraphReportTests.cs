@@ -82,6 +82,7 @@ class GraphReportTests
         }
         Check(GraphReportEmitter.Emit(new Graph()).Contains("0 objets"),"empty document supported");
         File.WriteAllText(Path.Combine(args[0],"example.analysis.md"),report,new UTF8Encoding(false));
+        AdvancedTests.Run(args[0]);
         Console.WriteLine("PASS: "+checks+" assertions sur l'export complet.");return 0;
     }
 }
